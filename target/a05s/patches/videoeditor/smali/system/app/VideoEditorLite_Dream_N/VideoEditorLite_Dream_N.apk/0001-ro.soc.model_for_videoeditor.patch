@@ -1,0 +1,28 @@
+From d8c09c79955f40b4ced525dab506eb498f1ef851 Mon Sep 17 00:00:00 2001
+From: furbanoramos21
+ <107002046+furbanoramos21-testing@users.noreply.github.com>
+Date: Thu, 9 Apr 2026 21:23:12 -0500
+Subject: [PATCH] VideoEditorLite_Dream_N: Use ro.soc.model_for_videoeditor to
+ spoof chipset requirements in unsupported devices
+
+This tries to fix 'Undefined error' when trying to cut a video or trying ro use Studio feature from gallery
+---
+ smali/com/sec/android/app/ve/specification/ChipSet.smali | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/smali/com/sec/android/app/ve/specification/ChipSet.smali b/smali/com/sec/android/app/ve/specification/ChipSet.smali
+index e61c4d7..85e865d 100644
+--- a/smali/com/sec/android/app/ve/specification/ChipSet.smali
++++ b/smali/com/sec/android/app/ve/specification/ChipSet.smali
+@@ -1004,7 +1004,7 @@
+     invoke-direct {v1}, Ljava/util/ArrayList;-><init>()V
+ 
+     :try_start_0
+-    const-string v2, "ro.soc.model"
++    const-string v2, "ro.soc.model_for_videoeditor"
+ 
+     invoke-static {v2}, Landroid/os/SemSystemProperties;->get(Ljava/lang/String;)Ljava/lang/String;
+ 
+-- 
+2.53.0
+

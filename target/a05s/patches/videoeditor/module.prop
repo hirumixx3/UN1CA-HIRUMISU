@@ -1,0 +1,4 @@
+id=videoeditor
+name=Video editor fix
+author=furbanoramos21
+description=Uses ro.soc.model_for_videoeditor to bypass chipset requirements without affect other apps.
