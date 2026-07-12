@@ -82,8 +82,8 @@ jobs:
           source ./buildenv.sh ${{ matrix.target }}
           ./scripts/make_rom.sh
 
-      - name: Sessão de debug se falhar
+      - name: Setup upterm session
         if: failure()
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 90
-
+        uses: lhotari/action-upterm@v1
+        with:
+        limit-access-to-actor: true
