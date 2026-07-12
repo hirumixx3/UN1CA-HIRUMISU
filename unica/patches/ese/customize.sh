@@ -21,8 +21,8 @@ LOG_MISSING_PATCHES()
 
 if [[ "$SOURCE_SECURITY_CONFIG_ESE_CHIP_VENDOR" == "NXP" ]] && [[ "$SOURCE_SECURITY_CONFIG_ESE_COS_NAME" == "JCOP6.2U" ]] && \
         [[ "$TARGET_SECURITY_CONFIG_ESE_CHIP_VENDOR" == "none" ]] && [[ "$TARGET_SECURITY_CONFIG_ESE_COS_NAME" == "none" ]]; then
-    APPLY_PATCH "system" "system/app/SecureElement/SecureElement.apk" \
-        "$MODPATH/ese/SecureElement.apk/0001-Disable-eSE-support.patch"
+#    APPLY_PATCH "system" "system/app/SecureElement/SecureElement.apk" \
+#        "$MODPATH/ese/SecureElement.apk/0001-Disable-eSE-support.patch"
     DELETE_FROM_WORK_DIR "system" "system/bin/sem_daemon"
     DELETE_FROM_WORK_DIR "system" "system/etc/init/sem.rc" 2>&1 | sed "/File not found/d"
     DELETE_FROM_WORK_DIR "system" "system/etc/init/sem_early.rc" 2>&1 | sed "/File not found/d"

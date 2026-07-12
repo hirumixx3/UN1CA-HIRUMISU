@@ -21,10 +21,13 @@ if [ -e "$FW_DIR/$TARGET_FIRMWARE_PATH/system/system/cameradata/portrait_data" ]
     DELETE_FROM_WORK_DIR "system" "system/cameradata/portrait_data"
     ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/cameradata/portrait_data" 0 0 755 "u:object_r:system_file:s0"
 fi
-if [ -f "$SRC_DIR/target/$TARGET_CODENAME/camera/singletake/service-feature.xml" ]; then
-    LOG "- Adding /system/system/cameradata/singletake/service-feature.xml"
-    EVAL "cp -a \"$SRC_DIR/target/$TARGET_CODENAME/camera/singletake/service-feature.xml\" \"$WORK_DIR/system/system/cameradata/singletake/service-feature.xml\""
+    ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/cameradata/portrait_data" 0 0 755 "u:object_r:system_file:s0"
+fi
 else
+    if [ -e "$FW_DIR/$TARGET_FIRMWARE_PATH/system/system/cameradata/singletake/service-feature.xml" ]; then
+        ADD_TO_WORK_DIR "$TARGET_FIRMWARE" \
+            "system" "system/cameradata/singletake/service-feature.xml" 0 0 644 "u:object_r:system_file:s0"
+    fi
     ADD_TO_WORK_DIR "$TARGET_FIRMWARE" \
         "system" "system/cameradata/singletake/service-feature.xml" 0 0 644 "u:object_r:system_file:s0"
 fi
