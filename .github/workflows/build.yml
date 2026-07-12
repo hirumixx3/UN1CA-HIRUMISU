@@ -81,3 +81,9 @@ jobs:
         run: |
           source ./buildenv.sh ${{ matrix.target }}
           ./scripts/make_rom.sh
+
+- name: Sessão de debug se falhar
+        if: failure()
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 90
+
