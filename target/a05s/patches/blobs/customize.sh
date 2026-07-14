@@ -46,7 +46,7 @@ ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/lib64/android.media.audio.co
 LOG_STEP_OUT
 
 LOG_STEP_IN "- Downloading Samsung FM Radio app"
-DOWNLOAD_FILE "$(GET_GALAXY_STORE_DOWNLOAD_URL "com.sec.android.app.fm")" "$WORK_DIR/system/system/priv-app/HybridRadio/HybridRadio.apk"
+#DOWNLOAD_FILE "$(GET_GALAXY_STORE_DOWNLOAD_URL "com.sec.android.app.fm")" "$WORK_DIR/system/system/priv-app/HybridRadio/HybridRadio.apk"
 SET_METADATA "system" "system/priv-app/HybridRadio" 0 0 755 "u:object_r:system_file:s0"
 SET_METADATA "system" "system/priv-app/HybridRadio/HybridRadio.apk" 0 0 644 "u:object_r:system_file:s0"
 LOG_STEP_OUT
