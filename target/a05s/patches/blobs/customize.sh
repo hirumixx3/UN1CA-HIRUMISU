@@ -45,11 +45,11 @@ ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/lib64/android.hardware.audio
 ADD_TO_WORK_DIR "$TARGET_FIRMWARE" "system" "system/lib64/android.media.audio.common.types-V2-ndk.so" 0 0 755 "u:object_r:system_lib_file:s0"
 LOG_STEP_OUT
 
-#LOG_STEP_IN "- Downloading Samsung FM Radio app"
-#DOWNLOAD_FILE "$(GET_GALAXY_STORE_DOWNLOAD_URL "com.sec.android.app.fm")" "$WORK_DIR/system/system/priv-app/HybridRadio/HybridRadio.apk"
-#SET_METADATA "system" "system/priv-app/HybridRadio" 0 0 755 "u:object_r:system_file:s0"
-#SET_METADATA "system" "system/priv-app/HybridRadio/HybridRadio.apk" 0 0 644 "u:object_r:system_file:s0"
-#LOG_STEP_OUT
+LOG_STEP_IN "- Downloading Samsung FM Radio app"
+DOWNLOAD_FILE "$(GET_GALAXY_STORE_DOWNLOAD_URL "com.sec.android.app.fm")" "$WORK_DIR/system/system/priv-app/HybridRadio/HybridRadio.apk"
+SET_METADATA "system" "system/priv-app/HybridRadio" 0 0 755 "u:object_r:system_file:s0"
+SET_METADATA "system" "system/priv-app/HybridRadio/HybridRadio.apk" 0 0 644 "u:object_r:system_file:s0"
+LOG_STEP_OUT
 
 LOG_STEP_IN "- Removing Google Hotword Enrollment blobs"
 DELETE_FROM_WORK_DIR "product" "priv-app/HotwordEnrollmentOKGoogleEx4HEXAGON"
