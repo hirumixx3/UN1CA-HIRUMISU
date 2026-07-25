@@ -68,7 +68,7 @@ if [[ "$SOURCE_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME" != "$TARGET_DVFSAPP_CONFIG_S
 #        "smali/U1/w.smali" "replace" \
 #        "<clinit>()V" \
 #        "$SOURCE_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME" \
-        "$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME"
+#        "$TARGET_DVFSAPP_CONFIG_SSRM_POLICY_FILENAME"
 fi
 
 if [ -f "$SRC_DIR/target/$TARGET_CODENAME/dvfs/siop_model.xml" ]; then

@@ -25,12 +25,7 @@ LOG_MISSING_PATCHES()
 # ]
 
 # SEC_PRODUCT_FEATURE_BUILD_MAINLINE_API_LEVEL
-if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVEL" ]]; then
-    SMALI_PATCH "system" "system/framework/esecomm.jar" \
-        "smali/com/sec/esecomm/EsecommAdapter.smali" "replace" \
-        "<clinit>()V" \
-        "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
-        "$TARGET_PRODUCT_SHIPPING_API_LEVEL"
+if false; then
     SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/enterprise/hdm/HdmSakManager.smali" "replace" \
         "isSupported(Landroid/content/Context;)Z" \
@@ -119,7 +114,7 @@ fi
 
 # SEC_PRODUCT_FEATURE_AUDIO_SUPPORT_VIRTUAL_VIBRATION_SOUND
 if $SOURCE_AUDIO_SUPPORT_VIRTUAL_VIBRATION; then
-    if ! $TARGET_AUDIO_SUPPORT_VIRTUAL_VIBRATION; then
+    if false; then
         APPLY_PATCH "system" "system/framework/framework.jar" \
             "$MODPATH/audio/virtual_vib/framework.jar/0001-Disable-virtual-vibration-support.patch"
         APPLY_PATCH "system" "system/framework/services.jar" \
@@ -247,7 +242,7 @@ fi
 
 # SEC_PRODUCT_FEATURE_COMMON_SUPPORT_HDR_EFFECT
 if $SOURCE_COMMON_SUPPORT_HDR_EFFECT; then
-    if ! $TARGET_COMMON_SUPPORT_HDR_EFFECT; then
+    if false; then
         SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_COMMON_SUPPORT_HDR_EFFECT" --delete
 
         APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
@@ -283,7 +278,7 @@ if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR"
         "$SOURCE_FINGERPRINT_CONFIG_SENSOR" \
         "$TARGET_FINGERPRINT_CONFIG_SENSOR"
     SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-        "smali_classes4/com/samsung/android/settings/biometrics/fingerprint/FingerprintSettingsUtils.smali" "replaceall" \
+        "smali_classes5/com/samsung/android/settings/biometrics/fingerprint/FingerprintSettingsUtils.smali" "replaceall" \
         "$SOURCE_FINGERPRINT_CONFIG_SENSOR" \
         "$TARGET_FINGERPRINT_CONFIG_SENSOR"
 
@@ -343,12 +338,12 @@ if [[ "$SOURCE_FINGERPRINT_CONFIG_SENSOR" != "$TARGET_FINGERPRINT_CONFIG_SENSOR"
                     "$MODPATH/fingerprint/side_fp/BiometricSetting.apk/0001-Add-FEATURE_FINGERPRINT_JDM_HAL-support.patch"
 
                 APPLY_PATCH "system" "system/framework/framework.jar" \
-                    "$MODPATH/fingerprint/side_fp/framework.jar/0001-Add-side-fingerprint-sensor-support.patch"
+                    "$MODPATH/fingerprint/side_fp/framework.jar/0001-Add-side-fingerprint-sensor-support.patch" || true
                 APPLY_PATCH "system" "system/framework/services.jar" \
-                    "$MODPATH/fingerprint/side_fp/services.jar/0001-Add-side-fingerprint-sensor-support.patch"
+                    "$MODPATH/fingerprint/side_fp/services.jar/0001-Add-side-fingerprint-sensor-support.patch" || true
                 EVAL "sed -i \"/implements/i .implements Lcom\/android\/server\/biometrics\/sensors\/fingerprint\/SemFpHalLifecycleListener;\" \"$APKTOOL_DIR/system/framework/services.jar/smali/com/android/server/biometrics/sensors/fingerprint/SemFingerprintServiceExtImpl.smali\""
                 APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-                    "$MODPATH/fingerprint/side_fp/SecSettings.apk/0001-Add-side-fingerprint-sensor-support.patch"
+                    "$MODPATH/fingerprint/side_fp/SecSettings.apk/0001-Add-side-fingerprint-sensor-support.patch" || true
                 EVAL "sed -i \"s/^\.implements.*/.implements Landroid\/widget\/CompoundButton\$OnCheckedChangeListener;/g\" \"$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/smali_classes4/com/samsung/android/settings/biometrics/fingerprint/SuwFingerprintUsefulFeature\\\$\\\$ExternalSyntheticLambda1.smali\""
                 SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
                     "smali_classes4/com/samsung/android/settings/biometrics/fingerprint/SuwFingerprintUsefulFeature\$\$ExternalSyntheticLambda4.smali" "remove"
