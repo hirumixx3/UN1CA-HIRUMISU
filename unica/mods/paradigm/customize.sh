@@ -47,27 +47,27 @@ ADD_TO_WORK_DIR "m3qxxx" "system" \
     "system/priv-app/EnvironmentAdaptiveDisplay/EnvironmentAdaptiveDisplay.apk" 0 0 644 "u:object_r:system_file:s0"
 if $TARGET_LCD_SUPPORT_MDNIE_HW; then
     APPLY_PATCH "system" "system/framework/services.jar" \
-        "$MODPATH/ead/services.jar/0001-Add-Adaptive-color-tone-feature.patch" || true
+        "$MODPATH/ead/services.jar/0001-Add-Adaptive-color-tone-feature.patch" || true || true
 else
     APPLY_PATCH "system" "system/framework/services.jar" \
-        "$MODPATH/ead_mdnie/services.jar/0001-Add-Adaptive-color-tone-feature.patch" || true
+        "$MODPATH/ead_mdnie/services.jar/0001-Add-Adaptive-color-tone-feature.patch" || true || true
 fi
 if $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
     if [ "$TARGET_PLATFORM_SDK_VERSION" -ge "36" ]; then
         APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-            "$MODPATH/ead_resolution/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch" || true
+            "$MODPATH/ead_resolution/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch" || true || true
     else
         APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-            "$MODPATH/ead_resolution_legacy/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch" || true
+            "$MODPATH/ead_resolution_legacy/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch" || true || true
     fi
 else
     APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-        "$MODPATH/ead/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch" || true
+        "$MODPATH/ead/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch" || true || true
 fi
 APPLY_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
-    "$MODPATH/ead/SettingsProvider.apk/0001-Add-Adaptive-color-tone-feature.patch" || true
+    "$MODPATH/ead/SettingsProvider.apk/0001-Add-Adaptive-color-tone-feature.patch" || true || true
 APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
-    "$MODPATH/ead/SystemUI.apk/0001-Add-Adaptive-color-tone-toggle.patch" || true
+    "$MODPATH/ead/SystemUI.apk/0001-Add-Adaptive-color-tone-toggle.patch" || true || true
 LOG_STEP_OUT
 
 # Media Context Analyzer

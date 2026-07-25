@@ -284,16 +284,16 @@ if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVE
         "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
         > /dev/null
-#    SMALI_PATCH "system" "system/framework/services.jar" \
-#        "smali/com/android/server/enterprise/hdm/HdmVendorController.smali" "replace" \
-#        "<init>()V" \
-#        "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
-#        "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
-#        > /dev/null
+##    SMALI_PATCH "system" "system/framework/services.jar" \
+##        "smali/com/android/server/enterprise/hdm/HdmVendorController.smali" "replace" \
+##        "<init>()V" \
+##        "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
+##        "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
+##        > /dev/null
 fi
 # Nuke HDM service and vendor controller
-#APPLY_PATCH "system" "system/framework/services.jar" \
-#    "$MODPATH/hdm/services.jar/0001-Nuke-Knox-HDM.patch"
+##APPLY_PATCH "system" "system/framework/services.jar" \
+##    "$MODPATH/hdm/services.jar/0001-Nuke-Knox-HDM.patch"
 SMALI_PATCH "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" \
     "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
     "$HDM_VERSION" \
@@ -426,7 +426,8 @@ SMALI_PATCH "system" "system/framework/framework.jar" \
     "SERVICE_SAMSUNG_BLOCKCHAIN:Z = false"
 if [[ "$TARGET_SECURITY_CONFIG_ESE_CHIP_VENDOR" == "none" ]] && [[ "$TARGET_SECURITY_CONFIG_ESE_COS_NAME" == "none" ]]; then
     :
-#    APPLY_PATCH "system" "system/framework/services.jar" \
+#    :
+##    APPLY_PATCH "system" "system/framework/services.jar" \
 #        "$MODPATH/ese+blockchain/services.jar/0001-Nuke-BlockchainTZService.patch"
 else
     APPLY_PATCH "system" "system/framework/services.jar" \
