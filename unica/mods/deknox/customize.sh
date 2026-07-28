@@ -1,17 +1,72 @@
 SET_PROP_IF_DIFF "vendor" "ro.security.fips.ux" "Disabled"
 
+DEKNOX_LIBEPM_PATCHED=0
+DEKNOX_LIBEPM_ALREADY=0
+DEKNOX_LIBMDF_PATCHED=0
+DEKNOX_LIBMDF_ALREADY=0
+
+DEKNOX_LIBEPM_PATCHED=0
+DEKNOX_LIBEPM_ALREADY=0
+DEKNOX_LIBMDF_PATCHED=0
+DEKNOX_LIBMDF_ALREADY=0
+
 DEKNOX_HEX_PATCH()
 {
     local FILE="$1"
     local FROM="$2"
     local TO="$3"
+    local FILE_HEX
+    local BASE
 
     if [ ! -f "$FILE" ]; then
         LOGW "File not found: ${FILE//$WORK_DIR/}"
         return 0
     fi
 
-    HEX_PATCH "$FILE" "$FROM" "$TO"
+    if [ "${#FROM}" -ne "${#TO}" ]; then
+        ABORT "Invalid deknox hex patch: source and target sizes differ for ${FILE//$WORK_DIR/}"
+    fi
+
+    FILE_HEX="$(xxd -p -c 0 "$FILE" | tr 'A-F' 'a-f')"
+    FROM="${FROM,,}"
+    TO="${TO,,}"
+    BASE="$(basename "$FILE")"
+
+    if [[ "$FILE_HEX" == *"$FROM"* ]]; then
+        LOG "- Applying compatible deknox signature to ${FILE//$WORK_DIR/}"
+
+        HEX_PATCH "$FILE" "$FROM" "$TO"
+
+        case "$BASE" in
+            libepm.so)
+                DEKNOX_LIBEPM_PATCHED=$((DEKNOX_LIBEPM_PATCHED + 1))
+                ;;
+            libmdf.so)
+                DEKNOX_LIBMDF_PATCHED=$((DEKNOX_LIBMDF_PATCHED + 1))
+                ;;
+        esac
+
+        return 0
+    fi
+
+    if [[ "$FILE_HEX" == *"$TO"* ]]; then
+        LOG "- Deknox signature already applied in ${FILE//$WORK_DIR/}"
+
+        case "$BASE" in
+            libepm.so)
+                DEKNOX_LIBEPM_ALREADY=$((DEKNOX_LIBEPM_ALREADY + 1))
+                ;;
+            libmdf.so)
+                DEKNOX_LIBMDF_ALREADY=$((DEKNOX_LIBMDF_ALREADY + 1))
+                ;;
+        esac
+
+        return 0
+    fi
+
+    # Esta assinatura específica não pertence à versão atual.
+    # Outras assinaturas conhecidas ainda serão testadas.
+    return 0
 }
 
 DELETE_FROM_WORK_DIR "system" "system/app/BlockchainBasicKit"
@@ -93,6 +148,19 @@ DEKNOX_HEX_PATCH "$WORK_DIR/system/system/lib64/libepm.so" \
 DEKNOX_HEX_PATCH "$WORK_DIR/system/system/lib64/libepm.so" \
     "3f2303d5fd7bbaa9fc6f01a9fa6702a9f85f03a9f65704a9f44f05a9ff0740d1ff8304d100e4006f" \
     "5f2403d5e0031f2ac0035fd61f2003d51f2003d51f2003d51f2003d51f2003d51f2003d51f2003d5"
+
+# BEGIN ONEUI9 LIBEPM PATCH AUDIT
+DEKNOX_LIBEPM_TOTAL=$((DEKNOX_LIBEPM_PATCHED + DEKNOX_LIBEPM_ALREADY))
+
+if [ "$DEKNOX_LIBEPM_TOTAL" -gt 0 ]; then
+    LOG "- libepm deknox signatures validated: patched=$DEKNOX_LIBEPM_PATCHED already=$DEKNOX_LIBEPM_ALREADY"
+else
+    LOGW "No known libepm.so native signature matches this One UI 9 build"
+    LOGW "Continuing with framework/app DualDAR removal; native libepm stubs were not modified"
+fi
+
+unset DEKNOX_LIBEPM_TOTAL
+# END ONEUI9 LIBEPM PATCH AUDIT
 
 # Some Knox-era shared objects are kept only as loader shims because
 # libandroid_servers.so has direct/transitive DT_NEEDED entries:
@@ -187,19 +255,36 @@ DEKNOX_HEX_PATCH "$WORK_DIR/system/system/lib/libmdf.so" \
 DEKNOX_HEX_PATCH "$WORK_DIR/system/system/lib/libmdf.so" \
     "80b501f06ceac0b2" "0020704700bf00bf"
 
-if [[ "$TARGET_OS_SINGLE_SYSTEM_IMAGE" == "mssi" ]] || [[ "$TARGET_OS_SINGLE_SYSTEM_IMAGE" == "qssi" ]]; then
-    DECODE_APK "system" "system/framework/framework.jar"
-    if grep -R -F -q 'unlockCeStorage(ILjava/lang/String;[B)V' \
-            "$APKTOOL_DIR/system/framework/framework.jar"/smali_classes*/android/os/IVold.smali 2> /dev/null; then
-        LOG "- Skipping unlockCeStorage token patch; framework.jar already uses token argument"
-    else
-        APPLY_PATCH "system" "system/framework/framework.jar" \
-            "$MODPATH/vold/framework.jar/0001-Add-token-argument-in-unlockCeStorage.patch"
-        APPLY_PATCH "system" "system/framework/services.jar" \
-            "$MODPATH/vold/services.jar/0001-Add-token-argument-in-unlockCeStorage.patch"
-    fi
-fi
+# BEGIN ONEUI9 UNLOCK CE STORAGE BINDER PATCH
+if [[ "$TARGET_OS_SINGLE_SYSTEM_IMAGE" == "mssi" ]] || \
+        [[ "$TARGET_OS_SINGLE_SYSTEM_IMAGE" == "qssi" ]]; then
+    DECODE_APK \
+        "system" \
+        "system/framework/framework.jar" \
+        || ABORT "Failed to decode framework.jar for unlockCeStorage"
 
+    DECODE_APK \
+        "system" \
+        "system/framework/services.jar" \
+        || ABORT "Failed to decode services.jar for unlockCeStorage"
+
+    UNLOCK_FRAMEWORK="$APKTOOL_DIR/system/framework/framework.jar"
+    UNLOCK_SERVICES="$APKTOOL_DIR/system/framework/services.jar"
+
+    LOG "- Adapting unlockCeStorage Binder contract semantically"
+
+    python3 \
+        "$MODPATH/vold/patch_unlock_ce_storage_oneui9.py" \
+        "$UNLOCK_FRAMEWORK" \
+        "$UNLOCK_SERVICES" \
+        || ABORT "unlockCeStorage Binder patch is incomplete"
+
+    LOG "- unlockCeStorage Binder contract fully validated"
+
+    unset UNLOCK_FRAMEWORK
+    unset UNLOCK_SERVICES
+fi
+# END ONEUI9 UNLOCK CE STORAGE BINDER PATCH
 DECODE_APK "system" "system/framework/services.jar"
 SOURCE_FILE_ATTR="$(grep -F ".source" "$APKTOOL_DIR/system/framework/services.jar/smali/android/gsi/GsiProgress.smali")"
 SOURCE_FILE_ATTR="${SOURCE_FILE_ATTR//\./\\\.}"
@@ -212,77 +297,87 @@ if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVE
     SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/knox/dar/ddar/ta/TAProxy.smali" "replace" \
         "updateServiceHolder(Z)V" \
-        "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
+        "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
         > /dev/null
 fi
 
 # SEC_PRODUCT_FEATURE_KNOX_SUPPORT_SDP
-APPLY_PATCH "system" "system/framework/framework.jar" \
-    "$MODPATH/sdp/framework.jar/0001-Nuke-Knox-SDP.patch"
-APPLY_PATCH "system" "system/framework/services.jar" \
-    "$MODPATH/sdp/services.jar/0001-Nuke-Knox-SDP.patch"
+# BEGIN UN1CA KNOX SDP SINGLE CALL
+source "$(dirname "${BASH_SOURCE[0]}")/apply_sdp_idempotent.sh" || exit 1
+# END UN1CA KNOX SDP SINGLE CALL
+LOG "- Applying semantic Nuke Knox SDP to /system/system/framework/services.jar"
+bash "$MODPATH/apply_sdp_services_semantic.sh" || exit 1
 
 # SEC_PRODUCT_FEATURE_KNOX_SUPPORT_DUAL_DAR
-APPLY_PATCH "system" "system/app/Traceur/Traceur.apk" \
-    "$MODPATH/ddar/Traceur.apk/0001-Nuke-Knox-DualDAR.patch"
-APPLY_PATCH "system" "system/framework/framework.jar" \
-    "$MODPATH/ddar/framework.jar/0001-Nuke-Knox-DualDAR.patch"
+LOG "- Applying semantic Nuke Knox DualDAR to /system/system/app/Traceur/Traceur.apk"
+bash "$MODPATH/apply_traceur_dualdar_semantic.sh" || exit 1
+DECODE_APK "system" "system/framework/framework.jar" || exit 1
+LOG "- Applying semantic Nuke Knox DualDAR to /system/system/framework/framework.jar"
+bash "$(dirname "${BASH_SOURCE[0]}")/apply_ddar_framework_semantic.sh" || exit 1
 APPLY_PATCH "system" "system/framework/framework.jar" \
     "$MODPATH/ddar/framework.jar/0002-Nuke-MDF.patch"
-APPLY_PATCH "system" "system/framework/knoxsdk.jar" \
-    "$MODPATH/ddar/knoxsdk.jar/0001-Nuke-Knox-DualDAR.patch"
-APPLY_PATCH "system" "system/framework/services.jar" \
-    "$MODPATH/ddar/services.jar/0001-Nuke-Knox-DualDAR.patch"
-APPLY_PATCH "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" \
-    "$MODPATH/ddar/DeviceDiagnostics.apk/0001-Nuke-Knox-DualDAR.patch"
-APPLY_PATCH "system" "system/priv-app/KnoxCore/KnoxCore.apk" \
-    "$MODPATH/ddar/KnoxCore.apk/0001-Nuke-Knox-DualDAR.patch"
-APPLY_PATCH "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" \
-    "$MODPATH/ddar/ManagedProvisioning.apk/0001-Nuke-Knox-DualDAR.patch"
-APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "$MODPATH/ddar/SecSettings.apk/0001-Nuke-Knox-DualDAR.patch"
-APPLY_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
-    "$MODPATH/ddar/SecSettingsIntelligence.apk/0001-Nuke-Knox-DualDAR.patch"
-APPLY_PATCH "system_ext" "priv-app/StorageManager/StorageManager.apk" \
-    "$MODPATH/ddar/StorageManager.apk/0001-Nuke-Knox-DualDAR.patch"
+DECODE_APK "system" "system/framework/knoxsdk.jar" || exit 1
+LOG "- Applying semantic Nuke Knox DualDAR to /system/system/framework/knoxsdk.jar"
+bash "$(dirname "${BASH_SOURCE[0]}")/apply_knoxsdk_dualdar_semantic.sh" || exit 1
+DECODE_APK "system" "system/framework/services.jar" || exit 1
+LOG "- Applying semantic Nuke Knox DualDAR to /system/system/framework/services.jar"
+bash "$MODPATH/apply_ddar_services_semantic.sh" || exit 1
+DECODE_APK "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" || exit 1
+LOG "- Applying semantic Nuke Knox DualDAR to /system/system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk"
+bash "$(dirname "${BASH_SOURCE[0]}")/apply_devicediagnostics_dualdar_semantic.sh" || exit 1
+DECODE_APK "system" "system/priv-app/KnoxCore/KnoxCore.apk" || exit 1
+LOG "- Applying semantic Nuke Knox DualDAR to /system/system/priv-app/KnoxCore/KnoxCore.apk"
+bash "$MODPATH/apply_remaining_dualdar_semantic.sh" "system" "system/priv-app/KnoxCore/KnoxCore.apk" "knoxcore" || exit 1
+DECODE_APK "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" || exit 1
+LOG "- Applying semantic Nuke Knox DualDAR to /system/system/priv-app/ManagedProvisioning/ManagedProvisioning.apk"
+bash "$MODPATH/apply_remaining_dualdar_semantic.sh" "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" "embedded" || exit 1
+DECODE_APK "system" "system/priv-app/SecSettings/SecSettings.apk" || exit 1
+LOG "- Applying semantic Nuke Knox DualDAR to /system/system/priv-app/SecSettings/SecSettings.apk"
+bash "$MODPATH/apply_remaining_dualdar_semantic.sh" "system" "system/priv-app/SecSettings/SecSettings.apk" "secsettings" || exit 1
+DECODE_APK "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" || exit 1
+LOG "- Applying semantic Nuke Knox DualDAR to /system/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk"
+bash "$MODPATH/apply_remaining_dualdar_semantic.sh" "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" "embedded" || exit 1
+DECODE_APK "system_ext" "priv-app/StorageManager/StorageManager.apk" || exit 1
+LOG "- Applying semantic Nuke Knox DualDAR to /system_ext/priv-app/StorageManager/StorageManager.apk"
+bash "$MODPATH/apply_remaining_dualdar_semantic.sh" "system_ext" "priv-app/StorageManager/StorageManager.apk" "embedded" || exit 1
 
 # SEC_PRODUCT_FEATURE_KNOX_SUPPORT_HDM
+# BEGIN UN1CA HDM SEMANTIC MANAGERS
+DECODE_APK "system" "system/app/Traceur/Traceur.apk" || exit 1
+bash "$MODPATH/apply_hdm_manager_semantic.sh" "system" "system/app/Traceur/Traceur.apk" || exit 1
+
+DECODE_APK "system" "system/framework/knoxsdk.jar" || exit 1
+bash "$MODPATH/apply_hdm_manager_semantic.sh" "system" "system/framework/knoxsdk.jar" || exit 1
+
+DECODE_APK "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" || exit 1
+bash "$MODPATH/apply_hdm_manager_semantic.sh" "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" || exit 1
+
+DECODE_APK "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" || exit 1
+bash "$MODPATH/apply_hdm_manager_semantic.sh" "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" || exit 1
+
+DECODE_APK "system" "system/priv-app/SecSettings/SecSettings.apk" || exit 1
+bash "$MODPATH/apply_hdm_manager_semantic.sh" "system" "system/priv-app/SecSettings/SecSettings.apk" || exit 1
+
+DECODE_APK "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" || exit 1
+bash "$MODPATH/apply_hdm_manager_semantic.sh" "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" || exit 1
+
+DECODE_APK "system_ext" "priv-app/StorageManager/StorageManager.apk" || exit 1
+bash "$MODPATH/apply_hdm_manager_semantic.sh" "system_ext" "priv-app/StorageManager/StorageManager.apk" || exit 1
+
+DECODE_APK "system_ext" "priv-app/SystemUI/SystemUI.apk" || exit 1
+bash "$MODPATH/apply_hdm_manager_semantic.sh" "system_ext" "priv-app/SystemUI/SystemUI.apk" || exit 1
+
+# END UN1CA HDM SEMANTIC MANAGERS
 DECODE_APK "system" "system/framework/knoxsdk.jar"
 
-HDM_VERSION="$(grep "const.* - .*\\w\"" "$APKTOOL_DIR/system/framework/knoxsdk.jar/smali/com/samsung/android/knox/hdm/HdmManager.smali" | tr -d "\"" | awk '{print $3}' -)"
-HDM_POLICY_TYPE="$(grep "const.* - .*\\w\"" "$APKTOOL_DIR/system/framework/knoxsdk.jar/smali/com/samsung/android/knox/hdm/HdmManager.smali" | tr -d "\"" | awk '{print $5}' -)"
 
-SMALI_PATCH "system" "system/app/Traceur/Traceur.apk" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_VERSION" \
-    "HDM_VERSION" \
-    > /dev/null
-SMALI_PATCH "system" "system/app/Traceur/Traceur.apk" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_POLICY_TYPE" \
-    "HDM_POLICY_TYPE" \
-    > /dev/null
-APPLY_PATCH "system" "system/app/Traceur/Traceur.apk" \
-    "$MODPATH/hdm/Traceur.apk/0001-Nuke-Knox-HDM.patch"
-SMALI_PATCH "system" "system/framework/knoxsdk.jar" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_VERSION" \
-    "HDM_VERSION" \
-    > /dev/null
-SMALI_PATCH "system" "system/framework/knoxsdk.jar" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_POLICY_TYPE" \
-    "HDM_POLICY_TYPE" \
-    > /dev/null
-APPLY_PATCH "system" "system/framework/knoxsdk.jar" \
-    "$MODPATH/hdm/knoxsdk.jar/0001-Nuke-Knox-HDM.patch"
 if [[ "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" != "$TARGET_PRODUCT_SHIPPING_API_LEVEL" ]]; then
     SMALI_PATCH "system" "system/framework/services.jar" \
         "smali/com/android/server/enterprise/hdm/HdmSakManager.smali" "replace" \
         "isSupported(Landroid/content/Context;)Z" \
-        "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
         "$SOURCE_PRODUCT_SHIPPING_API_LEVEL" \
+        "$TARGET_PRODUCT_SHIPPING_API_LEVEL" \
         > /dev/null
 ###    SMALI_PATCH "system" "system/framework/services.jar" \
 ###        "smali/com/android/server/enterprise/hdm/HdmVendorController.smali" "replace" \
@@ -294,129 +389,190 @@ fi
 # Nuke HDM service and vendor controller
 ###APPLY_PATCH "system" "system/framework/services.jar" \
 ###    "$MODPATH/hdm/services.jar/0001-Nuke-Knox-HDM.patch"
-SMALI_PATCH "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_VERSION" \
-    "HDM_VERSION" \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_POLICY_TYPE" \
-    "HDM_POLICY_TYPE" \
-    > /dev/null
-APPLY_PATCH "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" \
-    "$MODPATH/hdm/DeviceDiagnostics.apk/0001-Nuke-Knox-HDM.patch"
-SMALI_PATCH "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_VERSION" \
-    "HDM_VERSION" \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_POLICY_TYPE" \
-    "HDM_POLICY_TYPE" \
-    > /dev/null
-APPLY_PATCH "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" \
-    "$MODPATH/hdm/ManagedProvisioning.apk/0001-Nuke-Knox-HDM.patch"
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali_classes4/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_VERSION" \
-    "HDM_VERSION" \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali_classes4/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_POLICY_TYPE" \
-    "HDM_POLICY_TYPE" \
-    > /dev/null
-APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "$MODPATH/hdm/SecSettings.apk/0001-Nuke-Knox-HDM.patch"
-SMALI_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
-    "smali_classes2/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_VERSION" \
-    "HDM_VERSION" \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
-    "smali_classes2/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_POLICY_TYPE" \
-    "HDM_POLICY_TYPE" \
-    > /dev/null
-APPLY_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
-    "$MODPATH/hdm/SecSettingsIntelligence.apk/0001-Nuke-Knox-HDM.patch"
-SMALI_PATCH "system_ext" "priv-app/StorageManager/StorageManager.apk" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_VERSION" \
-    "HDM_VERSION" \
-    > /dev/null
-SMALI_PATCH "system_ext" "priv-app/StorageManager/StorageManager.apk" \
-    "smali/com/samsung/android/knox/hdm/HdmManager.smali" "replaceall" \
-    "$HDM_POLICY_TYPE" \
-    "HDM_POLICY_TYPE" \
-    > /dev/null
-APPLY_PATCH "system_ext" "priv-app/StorageManager/StorageManager.apk" \
-    "$MODPATH/hdm/StorageManager.apk/0001-Nuke-Knox-HDM.patch"
 
-unset HDM_VERSION HDM_POLICY_TYPE
 
 #SEC_PRODUCT_FEATURE_KNOX_SUPPORT_BLDP
-SMALI_PATCH "system" "system/app/Traceur/Traceur.apk" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
-    'isBldpEventSupported()Z' 'false'
-SMALI_PATCH "system" "system/framework/knoxsdk.jar" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
-    'isBldpEventSupported()Z' 'false'
-SMALI_PATCH "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
-    'isBldpEventSupported()Z' 'false'
-SMALI_PATCH "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
-    'isBldpEventSupported()Z' 'false'
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali_classes4/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
-    'isBldpEventSupported()Z' 'false'
-SMALI_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
-    "smali_classes2/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
-    'isBldpEventSupported()Z' 'false'
-SMALI_PATCH "system_ext" "priv-app/StorageManager/StorageManager.apk" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
-    'isBldpEventSupported()Z' 'false'
-SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
-    "smali_classes4/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
-    'isBldpEventSupported()Z' 'false'
 
 # SEC_PRODUCT_FEATURE_KNOX_SUPPORT_MPOS
 # TODO add services.jar patch
+DECODE_APK "system" "system/app/Traceur/Traceur.apk" || exit 1
+UN1CA_EAP_1_ROOT="$APKTOOL_DIR/system/app/Traceur/Traceur.apk"
+mapfile -t UN1CA_EAP_1_MATCHES < <(
+    find "${UN1CA_EAP_1_ROOT}" -type f \
+        -path '*/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali' \
+        -printf '%P\n'
+)
+
+if [ "${#UN1CA_EAP_1_MATCHES[@]}" -ne 1 ]; then
+    echo "ERRO: esperava exatamente uma cópia de EnhancedAttestationPolicy.smali em:"
+    echo "${UN1CA_EAP_1_ROOT}"
+    printf '  %s\n' "${UN1CA_EAP_1_MATCHES[@]}"
+    exit 1
+fi
+
+UN1CA_EAP_1_SMALI="${UN1CA_EAP_1_MATCHES[0]}"
+echo "    - EnhancedAttestationPolicy (system/app/Traceur/Traceur.apk): ${UN1CA_EAP_1_SMALI}"
 SMALI_PATCH "system" "system/app/Traceur/Traceur.apk" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
+    "${UN1CA_EAP_1_SMALI}" "return" \
     'isMposSupported()Z' 'false'
+unset UN1CA_EAP_1_ROOT UN1CA_EAP_1_SMALI UN1CA_EAP_1_MATCHES
+DECODE_APK "system" "system/framework/knoxsdk.jar" || exit 1
+UN1CA_EAP_2_ROOT="$APKTOOL_DIR/system/framework/knoxsdk.jar"
+mapfile -t UN1CA_EAP_2_MATCHES < <(
+    find "${UN1CA_EAP_2_ROOT}" -type f \
+        -path '*/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali' \
+        -printf '%P\n'
+)
+
+if [ "${#UN1CA_EAP_2_MATCHES[@]}" -ne 1 ]; then
+    echo "ERRO: esperava exatamente uma cópia de EnhancedAttestationPolicy.smali em:"
+    echo "${UN1CA_EAP_2_ROOT}"
+    printf '  %s\n' "${UN1CA_EAP_2_MATCHES[@]}"
+    exit 1
+fi
+
+UN1CA_EAP_2_SMALI="${UN1CA_EAP_2_MATCHES[0]}"
+echo "    - EnhancedAttestationPolicy (system/framework/knoxsdk.jar): ${UN1CA_EAP_2_SMALI}"
 SMALI_PATCH "system" "system/framework/knoxsdk.jar" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
+    "${UN1CA_EAP_2_SMALI}" "return" \
     'isMposSupported()Z' 'false'
+unset UN1CA_EAP_2_ROOT UN1CA_EAP_2_SMALI UN1CA_EAP_2_MATCHES
+DECODE_APK "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" || exit 1
+UN1CA_EAP_3_ROOT="$APKTOOL_DIR/system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk"
+mapfile -t UN1CA_EAP_3_MATCHES < <(
+    find "${UN1CA_EAP_3_ROOT}" -type f \
+        -path '*/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali' \
+        -printf '%P\n'
+)
+
+if [ "${#UN1CA_EAP_3_MATCHES[@]}" -ne 1 ]; then
+    echo "ERRO: esperava exatamente uma cópia de EnhancedAttestationPolicy.smali em:"
+    echo "${UN1CA_EAP_3_ROOT}"
+    printf '  %s\n' "${UN1CA_EAP_3_MATCHES[@]}"
+    exit 1
+fi
+
+UN1CA_EAP_3_SMALI="${UN1CA_EAP_3_MATCHES[0]}"
+echo "    - EnhancedAttestationPolicy (system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk): ${UN1CA_EAP_3_SMALI}"
 SMALI_PATCH "system" "system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
+    "${UN1CA_EAP_3_SMALI}" "return" \
     'isMposSupported()Z' 'false'
+unset UN1CA_EAP_3_ROOT UN1CA_EAP_3_SMALI UN1CA_EAP_3_MATCHES
+DECODE_APK "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" || exit 1
+UN1CA_EAP_4_ROOT="$APKTOOL_DIR/system/priv-app/ManagedProvisioning/ManagedProvisioning.apk"
+mapfile -t UN1CA_EAP_4_MATCHES < <(
+    find "${UN1CA_EAP_4_ROOT}" -type f \
+        -path '*/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali' \
+        -printf '%P\n'
+)
+
+if [ "${#UN1CA_EAP_4_MATCHES[@]}" -ne 1 ]; then
+    echo "ERRO: esperava exatamente uma cópia de EnhancedAttestationPolicy.smali em:"
+    echo "${UN1CA_EAP_4_ROOT}"
+    printf '  %s\n' "${UN1CA_EAP_4_MATCHES[@]}"
+    exit 1
+fi
+
+UN1CA_EAP_4_SMALI="${UN1CA_EAP_4_MATCHES[0]}"
+echo "    - EnhancedAttestationPolicy (system/priv-app/ManagedProvisioning/ManagedProvisioning.apk): ${UN1CA_EAP_4_SMALI}"
 SMALI_PATCH "system" "system/priv-app/ManagedProvisioning/ManagedProvisioning.apk" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
+    "${UN1CA_EAP_4_SMALI}" "return" \
     'isMposSupported()Z' 'false'
+unset UN1CA_EAP_4_ROOT UN1CA_EAP_4_SMALI UN1CA_EAP_4_MATCHES
+# BEGIN UN1CA DYNAMIC SECSETTINGS EAP PATH
+DECODE_APK "system" "system/priv-app/SecSettings/SecSettings.apk" || exit 1
+SECSETTINGS_EAP_ROOT="$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk"
+mapfile -t SECSETTINGS_EAP_MATCHES < <(
+    find "$SECSETTINGS_EAP_ROOT" -type f \
+        -path '*/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali' \
+        -printf '%P\n'
+)
+
+if [ "${#SECSETTINGS_EAP_MATCHES[@]}" -ne 1 ]; then
+    echo "ERRO: esperava uma única cópia de EnhancedAttestationPolicy.smali no SecSettings"
+    printf '  %s\n' "${SECSETTINGS_EAP_MATCHES[@]}"
+    exit 1
+fi
+
+SECSETTINGS_EAP_SMALI="${SECSETTINGS_EAP_MATCHES[0]}"
+echo "    - EnhancedAttestationPolicy: $SECSETTINGS_EAP_SMALI"
+# END UN1CA DYNAMIC SECSETTINGS EAP PATH
 SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali_classes4/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
+    "$SECSETTINGS_EAP_SMALI" "return" \
     'isMposSupported()Z' 'false'
+unset SECSETTINGS_EAP_ROOT SECSETTINGS_EAP_SMALI SECSETTINGS_EAP_MATCHES
+DECODE_APK "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" || exit 1
+UN1CA_EAP_5_ROOT="$APKTOOL_DIR/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk"
+mapfile -t UN1CA_EAP_5_MATCHES < <(
+    find "${UN1CA_EAP_5_ROOT}" -type f \
+        -path '*/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali' \
+        -printf '%P\n'
+)
+
+if [ "${#UN1CA_EAP_5_MATCHES[@]}" -ne 1 ]; then
+    echo "ERRO: esperava exatamente uma cópia de EnhancedAttestationPolicy.smali em:"
+    echo "${UN1CA_EAP_5_ROOT}"
+    printf '  %s\n' "${UN1CA_EAP_5_MATCHES[@]}"
+    exit 1
+fi
+
+UN1CA_EAP_5_SMALI="${UN1CA_EAP_5_MATCHES[0]}"
+echo "    - EnhancedAttestationPolicy (system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk): ${UN1CA_EAP_5_SMALI}"
 SMALI_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
-    "smali_classes2/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
+    "${UN1CA_EAP_5_SMALI}" "return" \
     'isMposSupported()Z' 'false'
+unset UN1CA_EAP_5_ROOT UN1CA_EAP_5_SMALI UN1CA_EAP_5_MATCHES
+DECODE_APK "system_ext" "priv-app/StorageManager/StorageManager.apk" || exit 1
+UN1CA_EAP_6_ROOT="$APKTOOL_DIR/system_ext/priv-app/StorageManager/StorageManager.apk"
+mapfile -t UN1CA_EAP_6_MATCHES < <(
+    find "${UN1CA_EAP_6_ROOT}" -type f \
+        -path '*/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali' \
+        -printf '%P\n'
+)
+
+if [ "${#UN1CA_EAP_6_MATCHES[@]}" -ne 1 ]; then
+    echo "ERRO: esperava exatamente uma cópia de EnhancedAttestationPolicy.smali em:"
+    echo "${UN1CA_EAP_6_ROOT}"
+    printf '  %s\n' "${UN1CA_EAP_6_MATCHES[@]}"
+    exit 1
+fi
+
+UN1CA_EAP_6_SMALI="${UN1CA_EAP_6_MATCHES[0]}"
+echo "    - EnhancedAttestationPolicy (priv-app/StorageManager/StorageManager.apk): ${UN1CA_EAP_6_SMALI}"
 SMALI_PATCH "system_ext" "priv-app/StorageManager/StorageManager.apk" \
-    "smali/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
+    "${UN1CA_EAP_6_SMALI}" "return" \
     'isMposSupported()Z' 'false'
+unset UN1CA_EAP_6_ROOT UN1CA_EAP_6_SMALI UN1CA_EAP_6_MATCHES
+DECODE_APK "system_ext" "priv-app/SystemUI/SystemUI.apk" || exit 1
+UN1CA_EAP_7_ROOT="$APKTOOL_DIR/system_ext/priv-app/SystemUI/SystemUI.apk"
+mapfile -t UN1CA_EAP_7_MATCHES < <(
+    find "${UN1CA_EAP_7_ROOT}" -type f \
+        -path '*/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali' \
+        -printf '%P\n'
+)
+
+if [ "${#UN1CA_EAP_7_MATCHES[@]}" -ne 1 ]; then
+    echo "ERRO: esperava exatamente uma cópia de EnhancedAttestationPolicy.smali em:"
+    echo "${UN1CA_EAP_7_ROOT}"
+    printf '  %s\n' "${UN1CA_EAP_7_MATCHES[@]}"
+    exit 1
+fi
+
+UN1CA_EAP_7_SMALI="${UN1CA_EAP_7_MATCHES[0]}"
+echo "    - EnhancedAttestationPolicy (priv-app/SystemUI/SystemUI.apk): ${UN1CA_EAP_7_SMALI}"
 SMALI_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
-    "smali_classes4/com/samsung/android/knox/integrity/EnhancedAttestationPolicy.smali" "return" \
+    "${UN1CA_EAP_7_SMALI}" "return" \
     'isMposSupported()Z' 'false'
+unset UN1CA_EAP_7_ROOT UN1CA_EAP_7_SMALI UN1CA_EAP_7_MATCHES
 
 #SEC_PRODUCT_FEATURE_KNOX_SUPPORT_KNOXGUARD
 APPLY_PATCH "system" "system/framework/services.jar" \
     "$MODPATH/knoxguard/services.jar/0001-Disable-KnoxGuard.patch"
 
 # SEC_PRODUCT_FEATURE_SECURITY_SUPPORT_KNOX_MATRIX_AI_PRIVACY
-APPLY_PATCH "system" "system/framework/framework.jar" \
-    "$MODPATH/kmxai/framework.jar/0001-Nuke-Knox-Matrix-AI-Privacy.patch"
+DECODE_APK "system" "system/framework/framework.jar" || exit 1
+LOG "- Applying semantic Nuke Knox Matrix AI Privacy to /system/system/framework/framework.jar"
+bash "$MODPATH/apply_kmxai_framework_semantic.sh" || exit 1
 
 #SEC_PRODUCT_FEATURE_FRAMEWORK_SUPPORT_BLOCKCHAIN_SERVICE
 SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_FRAMEWORK_SUPPORT_BLOCKCHAIN_SERVICE" --delete

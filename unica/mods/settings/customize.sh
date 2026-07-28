@@ -17,27 +17,119 @@ SMALI_PATCH "system" "system/framework/framework.jar" \
 
 DECODE_APK "system" "system/priv-app/SecSettings/SecSettings.apk"
 
-# Disable stock OTA references
-if [ ! -f "$WORK_DIR/system/system/priv-app/ChoiDujour/ChoiDujour.apk" ]; then
+# Android 17: resolve as classes independentemente de smali_classesN.
+APPLY_SECSETTINGS_CORE_PATCHES()
+{
+    local SECSETTINGS_DIR
+    local SOFTWARE_UPDATE_UTILS_SMALI
+    local ONEUI_VERSION_CONTROLLER_SMALI
+    local MODEL_NAME_GETTER_SMALI
+
+    SECSETTINGS_DIR="$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk"
+
+    RESOLVE_SECSETTINGS_SMALI()
+    {
+        local OUTPUT_VARIABLE="$1"
+        local RELATIVE_PATH="$2"
+        local -a MATCHES=()
+
+        mapfile -t MATCHES < <(
+            find "$SECSETTINGS_DIR" \
+                -type f \
+                -path "*/$RELATIVE_PATH" \
+                -printf '%P\n' |
+                sort
+        )
+
+        if [ "${#MATCHES[@]}" -ne 1 ]; then
+            printf '%s\n' \
+                "ERRO: esperado exatamente um SecSettings smali para $RELATIVE_PATH; encontrados: ${#MATCHES[@]}" \
+                >&2
+
+            if [ "${#MATCHES[@]}" -gt 0 ]; then
+                printf 'Candidato: %s\n' "${MATCHES[@]}" >&2
+            fi
+
+            return 1
+        fi
+
+        printf -v "$OUTPUT_VARIABLE" '%s' "${MATCHES[0]}"
+    }
+
+    RESOLVE_SECSETTINGS_SMALI \
+        SOFTWARE_UPDATE_UTILS_SMALI \
+        'com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali'
+
+    RESOLVE_SECSETTINGS_SMALI \
+        ONEUI_VERSION_CONTROLLER_SMALI \
+        'com/samsung/android/settings/deviceinfo/softwareinfo/OneUIVersionPreferenceController.smali'
+
+    RESOLVE_SECSETTINGS_SMALI \
+        MODEL_NAME_GETTER_SMALI \
+        'com/samsung/android/settings/deviceinfo/aboutphone/ModelNameGetter.smali'
+
+    LOG "- SoftwareUpdateUtils: $SOFTWARE_UPDATE_UTILS_SMALI"
+    LOG "- OneUIVersionPreferenceController: $ONEUI_VERSION_CONTROLLER_SMALI"
+    LOG "- ModelNameGetter: $MODEL_NAME_GETTER_SMALI"
+
+    # Disable stock OTA references on sources that still expose the old gate.
+    if [ ! -f "$WORK_DIR/system/system/priv-app/ChoiDujour/ChoiDujour.apk" ]; then
+        SOFTWARE_UPDATE_UTILS_FILE="$SECSETTINGS_DIR/$SOFTWARE_UPDATE_UTILS_SMALI"
+
+        if grep -qF \
+                'isOTAUpgradeAllowed(Landroid/content/Context;)Z' \
+                "$SOFTWARE_UPDATE_UTILS_FILE"; then
+            SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+                "$SOFTWARE_UPDATE_UTILS_SMALI" "return" \
+                'isOTAUpgradeAllowed(Landroid/content/Context;)Z' \
+                'false'
+        else
+            LOG "- Stock OTA gate is absent on Android 17; no OTA patch required"
+        fi
+
+        unset SOFTWARE_UPDATE_UTILS_FILE
+    fi
+
+    # Always show One UI minor version
+    ONEUI_VERSION_CONTROLLER_FILE="$SECSETTINGS_DIR/$ONEUI_VERSION_CONTROLLER_SMALI"
+
+    ONEUI_VERSION_METHOD="$(
+        sed -n \
+            '/^\.method .*isDeviceWithMicroVersion()Z$/,/^\.end method$/p' \
+            "$ONEUI_VERSION_CONTROLLER_FILE"
+    )"
+
+    if grep -qF 'const/4 p0, 0x1' <<< "$ONEUI_VERSION_METHOD" &&
+            grep -qF 'return p0' <<< "$ONEUI_VERSION_METHOD"; then
+        LOG "- isDeviceWithMicroVersion() already returns true; patch not required"
+    elif grep -qF 'move-result p0' <<< "$ONEUI_VERSION_METHOD"; then
+        SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
+            "$ONEUI_VERSION_CONTROLLER_SMALI" "replace" \
+            'isDeviceWithMicroVersion()Z' \
+            'move-result p0' \
+            'const/4 p0, 0x1'
+    else
+        LOGE "Unsupported isDeviceWithMicroVersion()Z structure"
+
+        printf '%s\n' "$ONEUI_VERSION_METHOD" >&2
+        return 1
+    fi
+
+    unset ONEUI_VERSION_METHOD
+    unset ONEUI_VERSION_CONTROLLER_FILE
+
+    # Show real device model number
     SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-        "smali_classes5/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali" "return" \
-        'isOTAUpgradeAllowed(Landroid/content/Context;)Z' \
-        'false'
-fi
+        "$MODEL_NAME_GETTER_SMALI" "replace" \
+        'getModelName()Ljava/lang/String;' \
+        'ro.product.model' \
+        'ro.boot.em.model'
 
-# Always show One UI minor version
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali_classes5/com/samsung/android/settings/deviceinfo/softwareinfo/OneUIVersionPreferenceController.smali" "replace" \
-    'isDeviceWithMicroVersion()Z' \
-    'move-result p0' \
-    'const/4 p0, 0x1'
+    unset -f RESOLVE_SECSETTINGS_SMALI
+}
 
-# Show real device model number
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali_classes5/com/samsung/android/settings/deviceinfo/aboutphone/ModelNameGetter.smali" "replace" \
-    'getModelName()Ljava/lang/String;' \
-    'ro.product.model' \
-    'ro.boot.em.model'
+APPLY_SECSETTINGS_CORE_PATCHES
+unset -f APPLY_SECSETTINGS_CORE_PATCHES
 
 LOG_STEP_IN "- Adding UN1CA Settings"
 
@@ -74,69 +166,32 @@ done < <(find "$MODPATH/SecSettings.apk" -type f \
 
 # Mark UN1CA Settings fragments as "valid"
 LOG "- Patching \"smali/com/android/settings/core/gateway/SettingsGateway.smali\" in /system/system/priv-app/SecSettings.apk"
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/core/gateway/SettingsGateway.smali" "replace" \
-    '<clinit>()V' \
-    'filled-new-array/range {v1 .. v171}, [Ljava/lang/String;' \
-    '    const-string v172, "io.mesalabs.unica.settings.UnicaSettingsFragment"\n\n    filled-new-array/range {v1 .. v160}, [Ljava/lang/String;' \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/core/gateway/SettingsGateway.smali" "replace" \
-    '<clinit>()V' \
-    'filled-new-array/range {v1 .. v160}, [Ljava/lang/String;' \
-    '    const-string v173, "io.mesalabs.unica.settings.extra.ExtraSettingsFragment"\n\n    filled-new-array/range {v1 .. v161}, [Ljava/lang/String;' \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/core/gateway/SettingsGateway.smali" "replace" \
-    '<clinit>()V' \
-    'filled-new-array/range {v1 .. v161}, [Ljava/lang/String;' \
-    '    const-string v174, "io.mesalabs.unica.settings.hma.HideMyApplistFragment"\n\n    filled-new-array/range {v1 .. v162}, [Ljava/lang/String;' \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/core/gateway/SettingsGateway.smali" "replace" \
-    '<clinit>()V' \
-    'filled-new-array/range {v1 .. v162}, [Ljava/lang/String;' \
-    '    const-string v175, "io.mesalabs.unica.settings.spoof.HideDeveloperStatusFragment"\n\n    filled-new-array/range {v1 .. v163}, [Ljava/lang/String;' \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/core/gateway/SettingsGateway.smali" "replace" \
-    '<clinit>()V' \
-    'filled-new-array/range {v1 .. v163}, [Ljava/lang/String;' \
-    '    const-string v176, "io.mesalabs.unica.settings.spoof.SpoofSettingsFragment"\n\n    filled-new-array/range {v1 .. v164}, [Ljava/lang/String;' \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/core/gateway/SettingsGateway.smali" "replace" \
-    '<clinit>()V' \
-    'filled-new-array/range {v1 .. v164}, [Ljava/lang/String;' \
-    '    const-string v177, "io.mesalabs.unica.settings.ui.UISettingsFragment"\n\n    filled-new-array/range {v1 .. v177}, [Ljava/lang/String;' \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/core/gateway/SettingsGateway.smali" "replace" \
-    '<clinit>()V' \
-    'filled-new-array/range {v1 .. v177}, [Ljava/lang/String;' \
-    '    const-string v178, "io.mesalabs.unica.settings.spoof.CameraFeatureFragment"\n\n    filled-new-array/range {v1 .. v178}, [Ljava/lang/String;' \
-    > /dev/null
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/core/gateway/SettingsGateway.smali" "replace" \
-    '<clinit>()V' \
-    'filled-new-array/range {v1 .. v178}, [Ljava/lang/String;' \
-    '    const-string v179, "io.mesalabs.unica.settings.extra.ScpmAllowlistFragment"\n\n    filled-new-array/range {v1 .. v179}, [Ljava/lang/String;' \
-    > /dev/null
 
-# Mark Privacy Display custom app fragment as "valid"
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/core/gateway/SettingsGateway.smali" "replace" \
-    '<clinit>()V' \
-    'filled-new-array/range {v1 .. v179}, [Ljava/lang/String;' \
-    '    const-string v180, "com.samsung.android.settings.bpd.PdCustomAppsSettings"\n\n    filled-new-array/range {v1 .. v180}, [Ljava/lang/String;' \
-    > /dev/null
+SETTINGS_GATEWAY_SMALI="$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/smali/com/android/settings/core/gateway/SettingsGateway.smali"
+
+if ! python3 \
+        "$MODPATH/apply_settings_gateway_fragments.py" \
+        "$SETTINGS_GATEWAY_SMALI"; then
+    LOGE "Failed to adapt SettingsGateway SAMSUNG_ENTRY_FRAGMENTS"
+    return 1
+fi
+
+unset SETTINGS_GATEWAY_SMALI
+
 LOG "- Patching \"smali/com/android/settings/SettingsActivity.smali\" in /system/system/priv-app/SecSettings.apk"
-SMALI_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-    "smali/com/android/settings/SettingsActivity.smali" "replace" \
-    'isValidFragment(Ljava/lang/String;)Z' \
-    'const/16 v2, 0xab' \
-    'const/16 v2, 0xb4' \
-    > /dev/null
+
+SETTINGS_GATEWAY_SMALI="$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/smali/com/android/settings/core/gateway/SettingsGateway.smali"
+SETTINGS_ACTIVITY_SMALI="$APKTOOL_DIR/system/priv-app/SecSettings/SecSettings.apk/smali/com/android/settings/SettingsActivity.smali"
+
+if ! python3 "$MODPATH/apply_settings_activity_fragment_count.py" \
+        "$SETTINGS_GATEWAY_SMALI" \
+        "$SETTINGS_ACTIVITY_SMALI"; then
+    LOGE "Failed to adapt SettingsActivity fragment count"
+    return 1
+fi
+
+unset SETTINGS_GATEWAY_SMALI
+unset SETTINGS_ACTIVITY_SMALI
 
 # Add UN1CA Settings SearchIndexDataProvider(s)
 LOG "- Patching Settings search index providers in /system/system/priv-app/SecSettings.apk"
@@ -192,19 +247,11 @@ if [ ! "$TOP_LEVEL_KEYS_COLLECTOR" ]; then
 fi
 TOP_LEVEL_KEYS_COLLECTOR_SMALI="${TOP_LEVEL_KEYS_COLLECTOR#$APKTOOL_DIR/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk/}"
 
-if ! grep -q '"top_level_unica"' "$TOP_LEVEL_KEYS_COLLECTOR"; then
-    SMALI_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
-        "$TOP_LEVEL_KEYS_COLLECTOR_SMALI" "replace" \
-        '<init>(Landroid/content/Context;)V' \
-        '.locals 36' \
-        '.locals 37' \
-        > /dev/null
-    SMALI_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
-        "$TOP_LEVEL_KEYS_COLLECTOR_SMALI" "replace" \
-        '<init>(Landroid/content/Context;)V' \
-        'filled-new-array/range {v1 .. v35}, [Ljava/lang/String;' \
-        '    const-string v36, "top_level_unica"\n\n    filled-new-array/range {v1 .. v36}, [Ljava/lang/String;' \
-        > /dev/null
+if ! python3 \
+        "$MODPATH/apply_top_level_unica.py" \
+        "$TOP_LEVEL_KEYS_COLLECTOR"; then
+    LOGE "Failed to adapt TopLevelKeysCollector top_level_unica"
+    return 1
 fi
 
 # Show Vulkan renderer toggle if required
@@ -216,3 +263,65 @@ unset -f ADD_UNICA_SETTINGS_SEARCH_INDEX_DATA_PROVIDER
 unset PATCH_INST CONTENT SEARCH_INDEX_RESOURCES SEARCH_INDEX_RESOURCES_SMALI TOP_LEVEL_KEYS_COLLECTOR TOP_LEVEL_KEYS_COLLECTOR_SMALI
 
 LOG_STEP_OUT
+
+# Android 17 semantic replacement for Allow disabling secure windows.
+DECODE_APK "system" "system/framework/services.jar"
+
+SECURE_WINDOWS_OBSERVER="$(
+    find "$APKTOOL_DIR/system/framework/services.jar" \
+        -type f \
+        -path '*/com/android/server/wm/WindowManagerService$SettingsObserver.smali' \
+        -print -quit
+)"
+
+if [ -z "$SECURE_WINDOWS_OBSERVER" ]; then
+    LOGE "WindowManagerService SettingsObserver smali not found"
+    return 1
+fi
+
+if ! python3 \
+        "$MODPATH/apply_secure_windows_semantic.py" \
+        "$SECURE_WINDOWS_OBSERVER"; then
+    LOGE "Failed to apply secure windows semantic patch"
+    return 1
+fi
+
+unset SECURE_WINDOWS_OBSERVER
+
+# Android 17 semantic replacement for Allow disable ASKS.
+DECODE_APK "system" "system/framework/services.jar"
+
+ASKS_MANAGER_SMALI="$(
+    find "$APKTOOL_DIR/system/framework/services.jar" \
+        -type f \
+        -path '*/com/android/server/asks/ASKSManagerService.smali' \
+        -print -quit
+)"
+
+if [ -z "$ASKS_MANAGER_SMALI" ]; then
+    LOGE "ASKSManagerService.smali not found"
+    return 1
+fi
+
+if ! python3 \
+        "$MODPATH/apply_asks_semantic.py" \
+        "$ASKS_MANAGER_SMALI"; then
+    LOGE "Failed to apply ASKS semantic patch"
+    return 1
+fi
+
+unset ASKS_MANAGER_SMALI
+
+# Android 17 semantic replacement for GNSS location toggle.
+DECODE_APK "system" "system/framework/services.jar"
+
+GNSS_SERVICES_DIR="$APKTOOL_DIR/system/framework/services.jar"
+
+if ! python3 \
+        "$MODPATH/apply_gnss_toggle_semantic.py" \
+        "$GNSS_SERVICES_DIR"; then
+    LOGE "Failed to apply GNSS location toggle semantic patch"
+    return 1
+fi
+
+unset GNSS_SERVICES_DIR

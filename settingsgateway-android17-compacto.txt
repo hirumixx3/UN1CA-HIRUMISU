@@ -1,0 +1,141 @@
+========== ARQUIVO ==========
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali/com/android/settings/core/gateway/SettingsGateway.smali
+
+========== CABEÇALHO ==========
+    15: .method static constructor <clinit>()V
+    16:     .locals 231
+    17: 
+    18:     const-class v0, Lcom/android/settings/connecteddevice/AdvancedConnectedDeviceDashboardFragment;
+    19: 
+    20:     invoke-virtual {v0}, Ljava/lang/Class;->getName()Ljava/lang/String;
+    21: 
+    22:     move-result-object v0
+
+========== ESTATÍSTICAS ==========
+Linhas do método: 3617
+Maior registrador referenciado: v230
+Quantidade de const-string: 22
+Quantidade de filled-new-array: 2
+
+========== ARRAYS DE STRING E CONTEXTO ==========
+
+--- contexto da linha real 2314 ---
+     2302:     const/16 v1, 0xe2
+     2303: 
+     2304:     aput-object v226, v0, v1
+     2305: 
+     2306:     const/16 v1, 0xe3
+     2307: 
+     2308:     aput-object v227, v0, v1
+     2309: 
+     2310:     const/16 v1, 0xe4
+     2311: 
+     2312:     aput-object v228, v0, v1
+     2313: 
+>>   2314:     sput-object v0, Lcom/android/settings/core/gateway/SettingsGateway;->ENTRY_FRAGMENTS:[Ljava/lang/String;
+     2315: 
+     2316:     const-class v0, Lcom/android/settings/Settings$ConnectedDeviceDashboardActivity;
+     2317: 
+     2318:     invoke-virtual {v0}, Ljava/lang/Class;->getName()Ljava/lang/String;
+     2319: 
+     2320:     move-result-object v1
+     2321: 
+     2322:     const-class v0, Lcom/android/settings/Settings$AppDashboardActivity;
+     2323: 
+     2324:     invoke-virtual {v0}, Ljava/lang/Class;->getName()Ljava/lang/String;
+     2325: 
+     2326:     move-result-object v2
+
+--- contexto da linha real 2590 ---
+     2578:     const-class v0, Lcom/android/settings/Settings$SecurityAndPrivacySettingsActivity;
+     2579: 
+     2580:     invoke-virtual {v0}, Ljava/lang/Class;->getName()Ljava/lang/String;
+     2581: 
+     2582:     move-result-object v45
+     2583: 
+     2584:     const-class v0, Lcom/android/settings/Settings$UsefulFeatureMainActivity;
+     2585: 
+     2586:     invoke-virtual {v0}, Ljava/lang/Class;->getName()Ljava/lang/String;
+     2587: 
+     2588:     move-result-object v46
+     2589: 
+>>   2590:     filled-new-array/range {v1 .. v46}, [Ljava/lang/String;
+     2591: 
+     2592:     move-result-object v0
+     2593: 
+     2594:     sput-object v0, Lcom/android/settings/core/gateway/SettingsGateway;->SETTINGS_FOR_RESTRICTED:[Ljava/lang/String;
+     2595: 
+     2596:     const-class v0, Lcom/samsung/android/settings/privacy/SecurityAndPrivacySettings;
+     2597: 
+     2598:     invoke-virtual {v0}, Ljava/lang/Class;->getName()Ljava/lang/String;
+     2599: 
+     2600:     move-result-object v6
+     2601: 
+     2602:     const-class v0, Lcom/samsung/android/settings/privacy/alertcenter/SecurityDashboardAlertCenterFragment;
+
+--- contexto da linha real 2594 ---
+     2603: 
+     2604:     invoke-virtual {v0}, Ljava/lang/Class;->getName()Ljava/lang/String;
+     2605: 
+     2606:     move-result-object v7
+
+--- contexto da linha real 3624 ---
+     3612:     const-string v151, "com.samsung.android.settings.accessibility.advanced.shortcut.VolumeUpAndDownSwitchPreferenceFragment"
+     3613: 
+     3614:     const-string v154, "com.samsung.android.settings.notification.ConfigureNotificationMoreSettings"
+     3615: 
+     3616:     const-string v155, "com.samsung.android.settings.lockscreen.LockScreenNotificationSettings"
+     3617: 
+     3618:     const-string v156, "com.samsung.android.settings.lockscreen.HideContentNotificationSettings"
+     3619: 
+     3620:     const-string v157, "com.samsung.android.settings.encryption.CryptSDCardSettings"
+     3621: 
+     3622:     const-string v179, "com.samsung.android.fast.ui.MainActivity"
+     3623: 
+>>   3624:     filled-new-array/range {v1 .. v186}, [Ljava/lang/String;
+     3625: 
+     3626:     move-result-object v0
+     3627: 
+     3628:     sput-object v0, Lcom/android/settings/core/gateway/SettingsGateway;->SAMSUNG_ENTRY_FRAGMENTS:[Ljava/lang/String;
+     3629: 
+     3630:     return-void
+     3631: .end method
+
+--- contexto da linha real 3628 ---
+
+========== CAMPOS ESTÁTICOS DE ARRAY ==========
+  2314:     sput-object v0, Lcom/android/settings/core/gateway/SettingsGateway;->ENTRY_FRAGMENTS:[Ljava/lang/String;
+  2594:     sput-object v0, Lcom/android/settings/core/gateway/SettingsGateway;->SETTINGS_FOR_RESTRICTED:[Ljava/lang/String;
+  3628:     sput-object v0, Lcom/android/settings/core/gateway/SettingsGateway;->SAMSUNG_ENTRY_FRAGMENTS:[Ljava/lang/String;
+
+========== FINAL DO MÉTODO ==========
+  3602:     const-string v34, "com.samsung.android.settings.activekey.AppList"
+  3603: 
+  3604:     const-string v122, "com.samsung.android.settings.notification.BadgeAppIconSettings"
+  3605: 
+  3606:     const-string v148, "com.samsung.android.settings.accessibility.advanced.shortcut.AccessibilityButtonPreferenceFragment"
+  3607: 
+  3608:     const-string v149, "com.samsung.android.settings.accessibility.advanced.shortcut.AccessibilityButtonSwitchPreferenceFragment"
+  3609: 
+  3610:     const-string v150, "com.samsung.android.settings.accessibility.advanced.shortcut.SideAndVolumeUpSwitchPreferenceFragment"
+  3611: 
+  3612:     const-string v151, "com.samsung.android.settings.accessibility.advanced.shortcut.VolumeUpAndDownSwitchPreferenceFragment"
+  3613: 
+  3614:     const-string v154, "com.samsung.android.settings.notification.ConfigureNotificationMoreSettings"
+  3615: 
+  3616:     const-string v155, "com.samsung.android.settings.lockscreen.LockScreenNotificationSettings"
+  3617: 
+  3618:     const-string v156, "com.samsung.android.settings.lockscreen.HideContentNotificationSettings"
+  3619: 
+  3620:     const-string v157, "com.samsung.android.settings.encryption.CryptSDCardSettings"
+  3621: 
+  3622:     const-string v179, "com.samsung.android.fast.ui.MainActivity"
+  3623: 
+  3624:     filled-new-array/range {v1 .. v186}, [Ljava/lang/String;
+  3625: 
+  3626:     move-result-object v0
+  3627: 
+  3628:     sput-object v0, Lcom/android/settings/core/gateway/SettingsGateway;->SAMSUNG_ENTRY_FRAGMENTS:[Ljava/lang/String;
+  3629: 
+  3630:     return-void
+  3631: .end method

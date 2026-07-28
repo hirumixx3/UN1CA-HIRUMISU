@@ -27,24 +27,15 @@ if [ ! -f "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" ]; then
     LOG_STEP_OUT
 fi
 
-# Disable VaultKeeper support
-# Before: [tbnz w8, #0, #0xXXXXXX]
-# After: [b #0xXXXXXX]
-if xxd -p -c 0 "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" | grep -q "2897773948050037"; then
-    HEX_PATCH "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" \
-        "2897773948050037" "289777392a000014"
-elif xxd -p -c 0 "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" | grep -q "2897663948050037"; then
-    HEX_PATCH "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" \
-        "2897663948050037" "289766392a000014"
-elif xxd -p -c 0 "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" | grep -q "f6713948050037330080"; then
-    HEX_PATCH "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" \
-        "f6713948050037330080" "f671392a000014330080"
-elif xxd -p -c 0 "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" | grep -q "f6733948050037330080"; then
-    HEX_PATCH "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" \
-        "f6733948050037330080" "f673392a000014330080"
-elif xxd -p -c 0 "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" | grep -q "76743948050037330080"; then
-    HEX_PATCH "$WORK_DIR/system/system/lib64/libbluetooth_jni.so" \
-        "76743948050037330080" "7674392a000014330080"
-else
-    ABORT "No known patch available for the supplied libbluetooth_jni.so"
+# Disable VaultKeeper Bluetooth key handling.
+# Uses exact, validated signatures and refuses unsafe blind patches.
+BT_LIB="$WORK_DIR/system/system/lib64/libbluetooth_jni.so"
+BT_PATCHER="$MODPATH/patch_bt_library.py"
+
+LOG "- Patching Bluetooth VaultKeeper handling"
+
+if ! python3 "$BT_PATCHER" "$BT_LIB"; then
+    ABORT "No safe One UI Bluetooth patch was applicable to libbluetooth_jni.so"
+
+rm -f "${BT_LIB}.bak-unpatched"
 fi

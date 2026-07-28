@@ -27,13 +27,16 @@ APPLY_PATCH "system" "system/framework/knoxsdk.jar" \
 SMALI_PATCH "system" "system/framework/samsungkeystoreutils.jar" \
     "smali/com/samsung/android/security/keystore/AttestParameterSpec.smali" "return" \
     'isVerifiableIntegrity()Z' 'true'
-APPLY_PATCH "system" "system/framework/services.jar" \
-    "$MODPATH/services.jar/0001-Bypass-ICD-verification.patch"
-
+# Android 17: o patch ICD literal foi substituído por uma
+# aplicação semântica completa depois que services.jar for
+# decompilado pelo primeiro SMALI_PATCH abaixo.
 # Disable SAK in DarManagerService
 SMALI_PATCH "system" "system/framework/services.jar" \
     "smali/com/android/server/knox/dar/DarManagerService.smali" "return" \
     'checkDeviceIntegrity([Ljava/security/cert/Certificate;)Z' 'true'
+
+LOG "- Applying \"Bypass ICD verification (Android 17 semantic)\" to /system/system/framework/services.jar"
+python3 "$MODPATH/apply_icd_android17.py" "/root/UN1CA-HIRUMISU"
 
 # Disable DRK in DarManagerService
 SMALI_PATCH "system" "system/framework/services.jar" \
@@ -47,9 +50,21 @@ SMALI_PATCH "system" "system/framework/services.jar" \
 
 # Spoof ROT/IntegrityStatus in Knox Matrix
 if [ -f "$WORK_DIR/system/system/priv-app/KmxService/KmxService.apk" ]; then
-    LOG "- Downloading latest Knox Matrix app"
-    DOWNLOAD_FILE "$(GET_GALAXY_STORE_DOWNLOAD_URL "com.samsung.android.kmxservice")" \
-        "$WORK_DIR/system/system/priv-app/KmxService/KmxService.apk"
+    LOG "- Resolving Knox Matrix download URL"
+
+    KMX_URL="$(
+        GET_GALAXY_STORE_DOWNLOAD_URL             "com.samsung.android.kmxservice"             2>/dev/null || true
+    )"
+
+    case "$KMX_URL" in
+        http://*|https://*)
+            LOG "- Downloading latest Knox Matrix app"
+            DOWNLOAD_FILE "$KMX_URL"                 "$WORK_DIR/system/system/priv-app/KmxService/KmxService.apk"
+            ;;
+        *)
+            LOG "- Galaxy Store URI unavailable; using Knox Matrix app from source firmware"
+            ;;
+    esac
     APPLY_PATCH "system" "system/priv-app/KmxService/KmxService.apk" \
         "$MODPATH/KmxService.apk/0002-Ignore-FabricEscrowVault-errors-in-KmxServiceReceiver.patch"
     SMALI_PATCH "system" "system/priv-app/KmxService/KmxService.apk" \

@@ -7,13 +7,13 @@ Subject: [PATCH] VideoEditorLite_Dream_N: Use ro.soc.model_for_videoeditor to
 
 This tries to fix 'Undefined error' when trying to cut a video or trying ro use Studio feature from gallery
 ---
- smali/com/sec/android/app/ve/specification/ChipSet.smali | 2 +-
+ smali_classes2/com/sec/android/app/ve/specification/ChipSet.smali | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/smali/com/sec/android/app/ve/specification/ChipSet.smali b/smali/com/sec/android/app/ve/specification/ChipSet.smali
+diff --git a/smali_classes2/com/sec/android/app/ve/specification/ChipSet.smali b/smali_classes2/com/sec/android/app/ve/specification/ChipSet.smali
 index e61c4d7..85e865d 100644
---- a/smali/com/sec/android/app/ve/specification/ChipSet.smali
-+++ b/smali/com/sec/android/app/ve/specification/ChipSet.smali
+--- a/smali_classes2/com/sec/android/app/ve/specification/ChipSet.smali
++++ b/smali_classes2/com/sec/android/app/ve/specification/ChipSet.smali
 @@ -1004,7 +1004,7 @@
      invoke-direct {v1}, Ljava/util/ArrayList;-><init>()V
  

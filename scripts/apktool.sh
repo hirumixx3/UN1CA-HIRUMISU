@@ -50,7 +50,7 @@ BUILD()
     # Build APK with --shorten-resource-paths (https://developer.android.com/tools/aapt2#optimize_options)
     find "$OUTPUT_PATH" -type f \( -name "*.orig" -o -name "*.rej" \) -delete
     REBALANCE_DEX
-    EVAL "apktool b -j \"$THREAD_COUNT\" -p \"$FRAMEWORK_DIR\" -srp \"$OUTPUT_PATH\"" || exit 1
+    EVAL "flock /tmp/unica-apktool-build.lock apktool b -j \"1\" -p \"$FRAMEWORK_DIR\" -srp \"$OUTPUT_PATH\"" || exit 1
 
     local FILE_NAME
     FILE_NAME="$(basename "$INPUT_FILE")"

@@ -1,22 +1,31 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Rezoss <rezoss79@users.noreply.github.com>
-Date: Sun, 24 May 2026 12:38:00 +0200
+From: UN1CA Android 17 adaptation <local@unica>
+Date: Mon, 27 Jul 2026 00:00:00 -0300
 Subject: [PATCH] Force Now Nudge Galaxy AI availability
 
-Force SecSettings to treat Now Nudge as available in the Galaxy AI list
-while preserving the original method registers and fallback code.
+Force the Android 17 SecSettings implementation to report
+Now Nudge support while preserving the original fallback code.
 
----
- .../intelligenceservice/NowNudgesGalaxyAIController.smali     | 4 ++++
- 1 file changed, 4 insertions(+)
-
-diff --git a/smali_classes2/com/samsung/android/settings/usefulfeature/intelligenceservice/NowNudgesGalaxyAIController.smali b/smali_classes2/com/samsung/android/settings/usefulfeature/intelligenceservice/NowNudgesGalaxyAIController.smali
---- a/smali_classes2/com/samsung/android/settings/usefulfeature/intelligenceservice/NowNudgesGalaxyAIController.smali
-+++ b/smali_classes2/com/samsung/android/settings/usefulfeature/intelligenceservice/NowNudgesGalaxyAIController.smali
-@@ -203,2 +203,6 @@
+diff --git a/smali_classes3/com/samsung/android/settings/usefulfeature/intelligence/intelligenceservice/controller/NowNudgesGalaxyAIController.smali b/smali_classes3/com/samsung/android/settings/usefulfeature/intelligence/intelligenceservice/controller/NowNudgesGalaxyAIController.smali
+--- a/smali_classes3/com/samsung/android/settings/usefulfeature/intelligence/intelligenceservice/controller/NowNudgesGalaxyAIController.smali
++++ b/smali_classes3/com/samsung/android/settings/usefulfeature/intelligence/intelligenceservice/controller/NowNudgesGalaxyAIController.smali
+@@ -200,12 +200,17 @@
+     return p0
+ .end method
+ 
  .method private supportsNowNudges()Z
      .locals 1
-+
+ 
 +    const/4 v0, 0x1
 +
 +    return v0
++
++
+     invoke-direct {p0}, Lcom/samsung/android/settings/usefulfeature/intelligence/intelligenceservice/controller/NowNudgesGalaxyAIController;->checkAiVersion()Z
+ 
+     move-result v0
+ 
+     if-eqz v0, :cond_0
+ 
+-- 
+2.43.0

@@ -1,25 +1,30 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Rezoss <rezoss@local>
-Date: Sun, 31 May 2026 12:00:00 +0200
+From: UN1CA Android 17 adaptation <local@unica>
+Date: Mon, 27 Jul 2026 00:00:00 -0300
 Subject: [PATCH] Bypass Monotype invalid font validation
 
-Mirror the LSPosed Monotype hook by making
-SecDisplayUtils.isInvalidFont(Context, String) return false.
+Make SecDisplayUtils.isInvalidFont(Context, String) return false.
+Adapted against the Android 17 SecSettings implementation.
 
-diff --git a/smali_classes5/com/samsung/android/settings/display/SecDisplayUtils.smali b/smali_classes5/com/samsung/android/settings/display/SecDisplayUtils.smali
-index 1111111..2222222 100644
---- a/smali_classes5/com/samsung/android/settings/display/SecDisplayUtils.smali
-+++ b/smali_classes5/com/samsung/android/settings/display/SecDisplayUtils.smali
-@@ -5072,6 +5072,10 @@
+--- a/smali_classes3/com/samsung/android/settings/display/SecDisplayUtils.smali
++++ b/smali_classes3/com/samsung/android/settings/display/SecDisplayUtils.smali
+@@ -5460,12 +5460,17 @@
+     return v0
+ .end method
+ 
  .method public static isInvalidFont(Landroid/content/Context;Ljava/lang/String;)Z
-     .locals 10
-
+     .locals 9
+ 
 +    const/4 v0, 0x0
 +
 +    return v0
 +
-     new-instance v0, Ljava/lang/StringBuilder;
-
-     const-string v1, "Check if it\'s invalid :"
---
++
+     const-string v0, "Check if it\'s invalid :"
+ 
+     const-string v1, "SecDisplayUtils"
+ 
+     invoke-static {v0, p1, v1}, Landroidx/fragment/app/Fragment$5$$ExternalSyntheticOutline0;->m$1(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+ 
+-- 
 2.43.0

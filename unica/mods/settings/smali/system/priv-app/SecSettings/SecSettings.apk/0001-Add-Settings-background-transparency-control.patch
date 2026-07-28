@@ -6,10 +6,10 @@ Subject: [PATCH] Add Settings background transparency control
 Hook the common Settings base activity so the UN1CA Display slider can
 apply a dark-mode-only alpha to the Settings window and root backgrounds.
 
-diff --git a/smali_classes5/com/samsung/android/settings/core/SecSettingsBaseActivity.smali b/smali_classes5/com/samsung/android/settings/core/SecSettingsBaseActivity.smali
+diff --git a/smali_classes3/com/samsung/android/settings/core/SecSettingsBaseActivity.smali b/smali_classes3/com/samsung/android/settings/core/SecSettingsBaseActivity.smali
 index 1111111..2222222 100644
---- a/smali_classes5/com/samsung/android/settings/core/SecSettingsBaseActivity.smali
-+++ b/smali_classes5/com/samsung/android/settings/core/SecSettingsBaseActivity.smali
+--- a/smali_classes3/com/samsung/android/settings/core/SecSettingsBaseActivity.smali
++++ b/smali_classes3/com/samsung/android/settings/core/SecSettingsBaseActivity.smali
 @@ -576,6 +576,8 @@
 
      iput-object p1, p0, Lcom/samsung/android/settings/core/SecSettingsBaseActivity;->mAccessibilityManager:Landroid/view/accessibility/AccessibilityManager;

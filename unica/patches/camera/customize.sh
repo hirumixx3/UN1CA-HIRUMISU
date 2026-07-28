@@ -93,24 +93,40 @@ elif ! grep -q "SUPPORT_SINGLE_TAKE_HIGHLIGHT_VIDEOS.*true" "$FW_DIR/$SOURCE_FIR
 fi
 
 # SEC_PRODUCT_FEATURE_CAMERA_SINGLETAKE_SOLUTIONS
-if ! grep -q "ENABLE_SINGLE_TAKE_LITE.*true" "$WORK_DIR/system/system/cameradata/singletake/service-feature.xml" 2>/dev/null && \
-        ! grep -q "SUPPORT_SMART_CROP.*false" "$WORK_DIR/system/system/cameradata/singletake/service-feature.xml" 2>/dev/null; then
-    if [ -d "$FW_DIR/$SOURCE_FIRMWARE_PATH/vendor/etc/singletake/SmartCrop" ]; then
-        if [ ! -d "$WORK_DIR/vendor/etc/singletake/SmartCrop" ] || \
-                [ "$TARGET_PLATFORM_SDK_VERSION" -lt "$SOURCE_PLATFORM_SDK_VERSION" ]; then
-            ADD_TO_WORK_DIR "$SOURCE_FIRMWARE" "vendor" \
-                "etc/singletake/SmartCrop/SmartCrop.tflite" 0 0 644 "u:object_r:vendor_configs_file:s0"
-        fi
-    else
-        # TODO handle this condition
-        SOURCE_SUPPORT_SMART_CROP=false
-        TARGET_SUPPORT_SMART_CROP=true
-        LOG_MISSING_PATCHES "SOURCE_SUPPORT_SMART_CROP" "TARGET_SUPPORT_SMART_CROP"
-        unset SOURCE_SUPPORT_SMART_CROP TARGET_SUPPORT_SMART_CROP
+SMART_CROP_REL="etc/singletake/SmartCrop/SmartCrop.tflite"
+SMART_CROP_DONOR="a05s-smartcrop"
+SMART_CROP_PREBUILT="$SRC_DIR/prebuilts/samsung/$SMART_CROP_DONOR/vendor/$SMART_CROP_REL"
+SMART_CROP_WORK="$WORK_DIR/vendor/$SMART_CROP_REL"
+
+if ! grep -q "ENABLE_SINGLE_TAKE_LITE.*true" \
+        "$WORK_DIR/system/system/cameradata/singletake/service-feature.xml" 2>/dev/null && \
+        ! grep -q "SUPPORT_SMART_CROP.*false" \
+        "$WORK_DIR/system/system/cameradata/singletake/service-feature.xml" 2>/dev/null; then
+
+    if [ ! -f "$SMART_CROP_PREBUILT" ]; then
+        ABORT "SmartCrop donor model not found: $SMART_CROP_PREBUILT"
     fi
+
+    if [ ! -f "$SMART_CROP_WORK" ] || \
+            [ "$TARGET_PLATFORM_SDK_VERSION" -lt "$SOURCE_PLATFORM_SDK_VERSION" ]; then
+        LOG "- Adding validated SmartCrop donor model"
+
+        ADD_TO_WORK_DIR "$SMART_CROP_DONOR" \
+            "vendor" \
+            "$SMART_CROP_REL" \
+            0 0 644 "u:object_r:vendor_configs_file:s0"
+    else
+        LOG "- Keeping existing SmartCrop model"
+    fi
+
+    SET_METADATA         "vendor"         "etc/singletake"         0 2000 755 "u:object_r:vendor_configs_file:s0"
+
+    SET_METADATA         "vendor"         "etc/singletake/SmartCrop"         0 2000 755 "u:object_r:vendor_configs_file:s0"
 else
     if [ -d "$WORK_DIR/vendor/etc/singletake/SmartCrop" ]; then
-        DELETE_FROM_WORK_DIR "vendor" "etc/singletake/SmartCrop"
+        DELETE_FROM_WORK_DIR \
+            "vendor" \
+            "etc/singletake/SmartCrop"
     fi
 fi
 
@@ -338,13 +354,107 @@ if [ -f "$WORK_DIR/system/system/lib64/libImageSegmenter_v1.camera.samsung.so" ]
 fi
 
 # Fix device model number in photo/video metadata
-while IFS= read -r f; do
-    HEX_PATCH "$f" "726f2e70726f647563742e6d6f64656c00" "726f2e626f6f742e656d2e6d6f64656c00"
-done < <(grep -r -w -l "ro.product.model" "$WORK_DIR/vendor" | grep "camera")
-HEX_PATCH "$WORK_DIR/system/system/lib/libstagefright.so" \
-    "726f2e70726f647563742e6d6f64656c00" "726f2e626f6f742e656d2e6d6f64656c00"
-HEX_PATCH "$WORK_DIR/system/system/lib64/libstagefright.so" \
-    "726f2e70726f647563742e6d6f64656c00" "726f2e626f6f742e656d2e6d6f64656c00"
+PATCH_CAMERA_MODEL_PROPERTY()
+{
+    local FILE="$1"
+    local RESULT
+    local STATUS=0
+
+    if [ ! -f "$FILE" ]; then
+        LOG "- Camera model patch: file absent, skipping $FILE"
+        return 0
+    fi
+
+    RESULT="$(
+        python3 - "$FILE" <<'PYTHON'
+from pathlib import Path
+import re
+import sys
+
+path = Path(sys.argv[1])
+data = path.read_bytes()
+
+source = b"ro.product.model\x00"
+target = b"ro.boot.em.model\x00"
+
+if len(source) != len(target):
+    raise SystemExit("Internal error: property sizes differ")
+
+source_count = data.count(source)
+target_count = data.count(target)
+
+if source_count:
+    original_size = len(data)
+    original_elf = data.startswith(b"\x7fELF")
+
+    patched = data.replace(source, target)
+
+    if len(patched) != original_size:
+        raise SystemExit("Binary size changed unexpectedly")
+
+    if patched.count(source):
+        raise SystemExit("Original property remains after patch")
+
+    if patched.count(target) < source_count:
+        raise SystemExit("Patched property validation failed")
+
+    if original_elf and not patched.startswith(b"\x7fELF"):
+        raise SystemExit("ELF header validation failed")
+
+    path.write_bytes(patched)
+
+    print(f"patched {source_count} exact occurrence(s): {path}")
+    raise SystemExit(0)
+
+if target_count:
+    print(f"already patched: {path}")
+    raise SystemExit(0)
+
+if b"ro.product.model" in data:
+    candidates = sorted(set(
+        match.decode("ascii", errors="replace")
+        for match in re.findall(
+            rb"ro\.[A-Za-z0-9_.-]{1,80}",
+            data
+        )
+        if b"model" in match
+    ))
+
+    description = ", ".join(candidates[:8])
+
+    print(
+        f"no standalone ro.product.model property in {path}"
+        + (f"; alternatives: {description}" if description else "")
+    )
+    raise SystemExit(0)
+
+print(f"property not used by binary: {path}")
+PYTHON
+    )" || STATUS=$?
+
+    if [ "$STATUS" -ne 0 ]; then
+        ABORT "Camera model property patch failed for $FILE: $RESULT"
+    fi
+
+    LOG "- Camera model patch: $RESULT"
+}
+
+while IFS= read -r FILE; do
+    PATCH_CAMERA_MODEL_PROPERTY "$FILE"
+done < <(
+    grep -r -a -F -l \
+        "ro.product.model" \
+        "$WORK_DIR/vendor" 2>/dev/null |
+    grep "camera" || true
+)
+
+PATCH_CAMERA_MODEL_PROPERTY \
+    "$WORK_DIR/system/system/lib/libstagefright.so"
+
+PATCH_CAMERA_MODEL_PROPERTY \
+    "$WORK_DIR/system/system/lib64/libstagefright.so"
+
+unset -f PATCH_CAMERA_MODEL_PROPERTY
 
 # Fix object capture
 if [[ "$TARGET_OS_SINGLE_SYSTEM_IMAGE" == "essi" ]]; then

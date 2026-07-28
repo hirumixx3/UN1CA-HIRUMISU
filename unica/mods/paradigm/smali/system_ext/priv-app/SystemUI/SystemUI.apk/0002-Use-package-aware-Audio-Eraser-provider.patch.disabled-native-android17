@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: UN1CA <noreply@unica.local>
+Date: Thu, 2 Jul 2026 00:00:00 +0000
+Subject: [PATCH] Use package-aware Audio Eraser provider
+
+Newer SoundAlive AudioEraserProvider expects AUDIO_ERASER_EFFECT values as
+package:strength. Read SystemUI's active audio_eraser_package_name preference
+so locally allowed media apps from unica_scpm_allowlist_packages use the same
+runtime command format as stock supported apps.
+---
+--- a/smali_classes3/com/android/systemui/samsung/quicksetting/ui/banner/AudioEraser$setMode$1.smali
++++ b/smali_classes3/com/android/systemui/samsung/quicksetting/ui/banner/AudioEraser$setMode$1.smali
+@@ -103,20 +103,6 @@
+ 
+     invoke-static {p1}, Lkotlin/ResultKt;->throwOnFailure(Ljava/lang/Object;)V
+ 
+-    new-instance p1, Landroid/content/ContentValues;
+-
+-    invoke-direct {p1}, Landroid/content/ContentValues;-><init>()V
+-
+-    iget v0, p0, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraser$setMode$1;->$mode:I
+-
+-    new-instance v1, Ljava/lang/Integer;
+-
+-    invoke-direct {v1, v0}, Ljava/lang/Integer;-><init>(I)V
+-
+-    const-string v0, "VOICE_BOOST_EFFECT"
+-
+-    invoke-virtual {p1, v0, v1}, Landroid/content/ContentValues;->put(Ljava/lang/String;Ljava/lang/Integer;)V
+-
+     iget-object v0, p0, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraser$setMode$1;->this$0:Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraser;
+ 
+     iget p0, p0, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraser$setMode$1;->$mode:I
+@@ -126,23 +112,11 @@
+ 
+     sget v1, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraser;->$r8$clinit:I
+ 
+-    iget-object v1, v0, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraser;->contentResolver$delegate:Lkotlin/Lazy;
+-
+-    invoke-interface {v1}, Lkotlin/Lazy;->getValue()Ljava/lang/Object;
+-
+-    move-result-object v1
+-
+-    check-cast v1, Landroid/content/ContentResolver;
+-
+-    iget-object v2, v0, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraser;->uri$delegate:Lkotlin/Lazy;
+-
+-    invoke-interface {v2}, Lkotlin/Lazy;->getValue()Ljava/lang/Object;
+-
+-    move-result-object v2
++    sget-object v1, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraserUtils;->INSTANCE:Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraserUtils;
+ 
+-    check-cast v2, Landroid/net/Uri;
++    iget-object v1, v0, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraser;->context:Landroid/content/Context;
+ 
+-    invoke-virtual {v1, v2, p1}, Landroid/content/ContentResolver;->insert(Landroid/net/Uri;Landroid/content/ContentValues;)Landroid/net/Uri;
++    invoke-static {p0, v1}, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraserUtils;->setStrength(ILandroid/content/Context;)V
+ 
+     const/4 p1, 0x1
+
+-- 
+2.43.0

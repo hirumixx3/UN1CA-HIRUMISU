@@ -1,0 +1,9 @@
+{
+  "old_context": [
+    "    move v0, v5",
+    "    :goto_8",
+    "    if-eqz v0, :cond_d",
+    "    iget-object v0, v1, Lcom/android/systemui/samsung/quicksetting/ui/banner/AudioEraserAudioPlaybackStartable;->activePlaybacks:Ljava/util/Map;",
+    "    invoke-static {v7}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;"
+  ]
+}

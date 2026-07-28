@@ -423,10 +423,10 @@ index 2bf02c02..96c60ba0 100644
      :try_start_1
      new-instance p0, Landroid/os/RemoteException;
  
-diff --git a/smali_classes4/com/android/internal/org/bouncycastle/jcajce/provider/asymmetric/EC$Mappings.smali b/smali_classes4/com/android/internal/org/bouncycastle/jcajce/provider/asymmetric/EC$Mappings.smali
+diff --git a/smali_classes5/com/android/internal/org/bouncycastle/jcajce/provider/asymmetric/EC$Mappings.smali b/smali_classes5/com/android/internal/org/bouncycastle/jcajce/provider/asymmetric/EC$Mappings.smali
 index 7da5e848..581668b7 100644
---- a/smali_classes4/com/android/internal/org/bouncycastle/jcajce/provider/asymmetric/EC$Mappings.smali
-+++ b/smali_classes4/com/android/internal/org/bouncycastle/jcajce/provider/asymmetric/EC$Mappings.smali
+--- a/smali_classes5/com/android/internal/org/bouncycastle/jcajce/provider/asymmetric/EC$Mappings.smali
++++ b/smali_classes5/com/android/internal/org/bouncycastle/jcajce/provider/asymmetric/EC$Mappings.smali
 @@ -26,7 +26,19 @@
  
  # virtual methods

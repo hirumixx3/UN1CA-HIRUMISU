@@ -203,7 +203,7 @@ if $APKTOOL; then
 fi
 if $EROFS_UTILS; then
     EROFS_UTILS_CMDS=(
-        "cmake -S \"build/cmake\" -B \"out\" $(GET_CMAKE_FLAGS) -DRUN_ON_WSL=\"$(IS_WSL)\" -DENABLE_FULL_LTO=\"ON\" -DMAX_BLOCK_SIZE=\"4096\""
+        "cmake -S \"build/cmake\" -B \"out\" $(GET_CMAKE_FLAGS) -DRUN_ON_WSL=\"$(IS_WSL)\" -DENABLE_FULL_LTO=\"OFF\" -DMAX_BLOCK_SIZE=\"4096\""
         "make -C \"out\" -j\"$(nproc)\""
         "find \"out/erofs-tools\" -maxdepth 1 -type f -exec test -x {} \; -exec cp -a {} \"$TOOLS_DIR/bin\" \;"
     )

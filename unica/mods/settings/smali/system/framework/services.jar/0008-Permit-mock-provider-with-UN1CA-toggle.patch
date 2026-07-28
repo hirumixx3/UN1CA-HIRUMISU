@@ -7,10 +7,10 @@ Subject: [PATCH] Permit mock provider with UN1CA toggle
  .../location/injector/SystemAppOpsHelper.smali | 22 ++++++++++++++++++++++
  1 file changed, 22 insertions(+)
 
-diff --git a/smali/com/android/server/location/injector/SystemAppOpsHelper.smali b/smali/com/android/server/location/injector/SystemAppOpsHelper.smali
+diff --git a/smali_classes2/com/android/server/location/injector/SystemAppOpsHelper.smali b/smali_classes2/com/android/server/location/injector/SystemAppOpsHelper.smali
 index aaa000002..bbb000002 100644
---- a/smali/com/android/server/location/injector/SystemAppOpsHelper.smali
-+++ b/smali/com/android/server/location/injector/SystemAppOpsHelper.smali
+--- a/smali_classes2/com/android/server/location/injector/SystemAppOpsHelper.smali
++++ b/smali_classes2/com/android/server/location/injector/SystemAppOpsHelper.smali
 @@ -141,6 +141,28 @@
 
      invoke-static {v0}, Lcom/android/internal/util/Preconditions;->checkState(Z)V

@@ -40,34 +40,12 @@ APPLY_PATCH "system" "system/priv-app/SecSoundPicker/SecSoundPicker.apk" \
 LOG_STEP_OUT
 
 # Adaptive colour tone
-LOG_STEP_IN "- Adding Adaptive colour tone feature"
-ADD_TO_WORK_DIR "m3qxxx" "system" \
-    "system/etc/permissions/privapp-permissions-com.samsung.android.sead.xml" 0 0 644 "u:object_r:system_file:s0"
-ADD_TO_WORK_DIR "m3qxxx" "system" \
-    "system/priv-app/EnvironmentAdaptiveDisplay/EnvironmentAdaptiveDisplay.apk" 0 0 644 "u:object_r:system_file:s0"
-if $TARGET_LCD_SUPPORT_MDNIE_HW; then
-    APPLY_PATCH "system" "system/framework/services.jar" \
-        "$MODPATH/ead/services.jar/0001-Add-Adaptive-color-tone-feature.patch" || true || true || true
-else
-    APPLY_PATCH "system" "system/framework/services.jar" \
-        "$MODPATH/ead_mdnie/services.jar/0001-Add-Adaptive-color-tone-feature.patch" || true || true || true
-fi
-if $TARGET_COMMON_SUPPORT_DYN_RESOLUTION_CONTROL; then
-    if [ "$TARGET_PLATFORM_SDK_VERSION" -ge "36" ]; then
-        APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-            "$MODPATH/ead_resolution/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch" || true || true || true
-    else
-        APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-            "$MODPATH/ead_resolution_legacy/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch" || true || true || true
-    fi
-else
-    APPLY_PATCH "system" "system/priv-app/SecSettings/SecSettings.apk" \
-        "$MODPATH/ead/SecSettings.apk/0001-Add-Adaptive-color-tone-feature.patch" || true || true || true
-fi
-APPLY_PATCH "system" "system/priv-app/SettingsProvider/SettingsProvider.apk" \
-    "$MODPATH/ead/SettingsProvider.apk/0001-Add-Adaptive-color-tone-feature.patch" || true || true || true
-APPLY_PATCH "system_ext" "priv-app/SystemUI/SystemUI.apk" \
-    "$MODPATH/ead/SystemUI.apk/0001-Add-Adaptive-color-tone-toggle.patch" || true || true || true
+# Desativado no port Android 17:
+# os patches services.jar, SecSettings, SettingsProvider e SystemUI
+# pertencem a uma implementação anterior e não são compatíveis com
+# a estrutura atual.
+LOG_STEP_IN "- Skipping Adaptive colour tone feature on Android 17"
+LOG "- Adaptive colour tone patches are not compatible with this Android 17 base"
 LOG_STEP_OUT
 
 # Media Context Analyzer
@@ -134,6 +112,9 @@ ADD_TO_WORK_DIR "m3qxxx" "vendor" "lib64/lib_SoundAlive_3DPosition_ver202.so" 0 
 ADD_TO_WORK_DIR "m3qxxx" "vendor" "lib64/lib_SoundAlive_AlbumArt_ver105.so" 0 0 644 "u:object_r:vendor_file:s0"
 ADD_TO_WORK_DIR "m3qxxx" "vendor" "lib64/lib_SoundAlive_play_plus_ver900.so" 0 0 644 "u:object_r:vendor_file:s0"
 SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_AUDIO_CONFIG_MULTISOURCE_SEPARATOR" "{FastScanning_6, SourceSeparator_4, Version_1.3.0}"
+DECODE_APK "system_ext" "priv-app/SystemUI/SystemUI.apk"
+LOG "- Applying Audio Eraser Android 17 semantic patch"
+EVAL "python3 \"$MODPATH/apply_audio_eraser_android17.py\" \"$APKTOOL_DIR/system_ext/priv-app/SystemUI/SystemUI.apk\""
 LOG_STEP_OUT
 
 # Now brief
@@ -213,15 +194,54 @@ unset SEMANTIC_SEARCH_CORE_DECODED SEMANTIC_SEARCH_CORE_PATCH
 DECODE_APK "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk"
 LOG "- Enabling Semantic search feature in /system/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk"
 EVAL "cp -a \"$MODPATH/semanticsearch/SecSettingsIntelligence.apk/res/raw/\"* \"$APKTOOL_DIR/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk/res/raw\""
-SMALI_PATCH "system" "system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk" \
-    "smali_classes2/com/samsung/android/settings/intelligence/Rune.smali" "replaceall" \
-    "const-string v1, \\\"\\\"" \
-    "const-string v1, \\\"400\\\"" \
-    > /dev/null
+LOG "- Enabling Semantic Search version 400 in /system/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk"
+EVAL "python3 \"$MODPATH/apply_semantic_search_android17.py\" \"$APKTOOL_DIR/system/priv-app/SecSettingsIntelligence/SecSettingsIntelligence.apk\""
 SET_FLOATING_FEATURE_CONFIG "SEC_FLOATING_FEATURE_MSCH_SUPPORT_NLSEARCH" "TRUE"
 LOG_STEP_OUT
 
 # Game Booster
 LOG "- Downloading latest Game Booster app"
-DOWNLOAD_FILE "$(GET_GALAXY_STORE_DOWNLOAD_URL "com.samsung.android.game.gametools")" \
-    "$WORK_DIR/system/system/priv-app/GameTools_Dream/GameTools_Dream.apk"
+GAME_TOOLS_APK="$WORK_DIR/system/system/priv-app/GameTools_Dream/GameTools_Dream.apk"
+
+GAME_TOOLS_URL="$(
+    GET_GALAXY_STORE_DOWNLOAD_URL \
+        "com.samsung.android.game.gametools" \
+        2>/dev/null || true
+)"
+
+case "$GAME_TOOLS_URL" in
+    http://*|https://*)
+        LOG "- Downloading latest Game Booster app"
+        DOWNLOAD_FILE "$GAME_TOOLS_URL" "$GAME_TOOLS_APK"
+        ;;
+    *)
+        LOG "- Galaxy Store URI unavailable; using Game Booster from source firmware"
+
+        if [ ! -s "$GAME_TOOLS_APK" ]; then
+            GAME_TOOLS_SOURCE="$(
+                find "$WORK_DIR/system" -type f \
+                    \( -name 'GameTools_Dream.apk' \
+                       -o -name 'GameTools.apk' \) \
+                    -print -quit 2>/dev/null
+            )"
+
+            if [ -n "$GAME_TOOLS_SOURCE" ] && [ -s "$GAME_TOOLS_SOURCE" ]; then
+                mkdir -p "$(dirname "$GAME_TOOLS_APK")"
+                cp -a "$GAME_TOOLS_SOURCE" "$GAME_TOOLS_APK"
+            else
+                echo "ERRO: Game Booster não existe na firmware source." >&2
+                exit 1
+            fi
+        fi
+        ;;
+esac
+
+if [ ! -s "$GAME_TOOLS_APK" ]; then
+    echo "ERRO: Game Booster APK está vazio ou ausente: $GAME_TOOLS_APK" >&2
+    exit 1
+fi
+
+if ! unzip -tqq "$GAME_TOOLS_APK" >/dev/null 2>&1; then
+    echo "ERRO: Game Booster APK inválido: $GAME_TOOLS_APK" >&2
+    exit 1
+fi

@@ -81,7 +81,21 @@ EXTRACT_OS_PARTITIONS()
                 # EVAL "lpunpack -p \"${p}_a\" \"$FW_DIR/${MODEL}_${CSC}/super.img\" \"$FW_DIR/${MODEL}_${CSC}\"" || exit 1
                 # mv -f "$FW_DIR/${MODEL}_${CSC}/${p}_a.img" "$FW_DIR/${MODEL}_${CSC}/${p}.img"
             # else
-                EVAL "lpunpack -p \"${p}\" \"$FW_DIR/${MODEL}_${CSC}/super.img\" \"$FW_DIR/${MODEL}_${CSC}\"" || exit 1
+                SUPER_IMAGE="$FW_DIR/${MODEL}_${CSC}/super.img"
+                OUTPUT_DIR="$FW_DIR/${MODEL}_${CSC}"
+
+                if lpunpack -p "${p}" "$SUPER_IMAGE" "$OUTPUT_DIR" >/dev/null 2>&1; then
+                    LOG "- Extracted logical partition ${p}"
+                elif lpunpack -p "${p}_a" "$SUPER_IMAGE" "$OUTPUT_DIR" >/dev/null 2>&1; then
+                    mv -f "$OUTPUT_DIR/${p}_a.img" "$OUTPUT_DIR/${p}.img"
+                    LOG "- Extracted logical partition ${p}_a as ${p}"
+                elif lpunpack -p "${p}_b" "$SUPER_IMAGE" "$OUTPUT_DIR" >/dev/null 2>&1; then
+                    mv -f "$OUTPUT_DIR/${p}_b.img" "$OUTPUT_DIR/${p}.img"
+                    LOG "- Extracted logical partition ${p}_b as ${p}"
+                else
+                    LOGE "Could not find logical partition: ${p}, ${p}_a or ${p}_b"
+                    exit 1
+                fi
             # fi
         done
 
@@ -350,9 +364,14 @@ for i in "${FIRMWARES[@]}"; do
     PARSE_FIRMWARE_STRING "$i" || exit 1
 
     LATEST_FIRMWARE="$(GET_LATEST_FIRMWARE "$MODEL" "$CSC")"
-    if [ ! "$LATEST_FIRMWARE" ]; then
-        LOGE "Latest available firmware could not be fetched"
-        exit 1
+    if [ -z "$LATEST_FIRMWARE" ]; then
+        if [ -s "$ODIN_DIR/${MODEL}_${CSC}/.downloaded" ]; then
+            LATEST_FIRMWARE="$(cat "$ODIN_DIR/${MODEL}_${CSC}/.downloaded")"
+            LOG "\033[0;33m! FOTA unavailable; using locally registered firmware: $LATEST_FIRMWARE\033[0m"
+        else
+            LOGE "Latest available firmware could not be fetched and no local firmware marker exists"
+            exit 1
+        fi
     fi
 
     LOG_STEP_IN "- Processing $MODEL firmware with $CSC CSC"

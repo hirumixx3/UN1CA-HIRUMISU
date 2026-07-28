@@ -4,13 +4,13 @@ Date: Fri, 5 Jun 2026 18:30:00 +0200
 Subject: [PATCH] Allow runtime camera feature override
 
 ---
- smali_classes3/O1/h.smali | 24 ++++++++++++++++++++++++
+ smali_classes3/f5/g.smali | 24 ++++++++++++++++++++++++
  1 file changed, 24 insertions(+)
 
-diff --git a/smali_classes3/O1/h.smali b/smali_classes3/O1/h.smali
+diff --git a/smali_classes3/f5/g.smali b/smali_classes3/f5/g.smali
 index 11111111..22222222 100644
---- a/smali_classes3/O1/h.smali
-+++ b/smali_classes3/O1/h.smali
+--- a/smali_classes3/f5/g.smali
++++ b/smali_classes3/f5/g.smali
 @@ -123,1 +123,25 @@
      invoke-direct {v1, v0}, Ljava/io/File;-><init>(Ljava/lang/String;)V
 +

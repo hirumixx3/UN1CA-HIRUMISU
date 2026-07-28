@@ -1,0 +1,73 @@
+========== ARQUIVO ==========
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali
+
+========== MÉTODOS DE SOFTWAREUPDATEUTILS ==========
+7:.method public static getFotaBadgeCount(Landroid/content/Context;)I
+43:.method public static isTFNFotaEnabled(Landroid/content/Context;)Z
+110:.method public static isVZWFotaEnabled(Landroid/content/Context;)Z
+177:.method public static launchSoftwareUpdateForSecurityUpdateMenu(Landroid/content/Context;)V
+302:.method public static needSoftwareUpdateBlockonDexMode(Landroid/content/Context;)Z
+342:.method public static startFotaActivityOrBroadcast(Landroid/content/Context;Ljava/lang/String;)V
+
+========== MÉTODOS DE SOFTWAREUPDATEUTILS CHAMADOS ==========
+getFotaBadgeCount(Landroid/content/Context;)I
+isTFNFotaEnabled(Landroid/content/Context;)Z
+isVZWFotaEnabled(Landroid/content/Context;)Z
+launchSoftwareUpdateForSecurityUpdateMenu(Landroid/content/Context;)V
+needSoftwareUpdateBlockonDexMode(Landroid/content/Context;)Z
+startFotaActivityOrBroadcast(Landroid/content/Context;Ljava/lang/String;)V
+
+========== LOCAIS DAS CHAMADAS ==========
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali/com/android/settings/Settings$SoftwareUpdateSettingActivity.smali:32:    invoke-static {p0, p1}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->startFotaActivityOrBroadcast(Landroid/content/Context;Ljava/lang/String;)V
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/privacy/SecurityDashboardUtils.smali:1457:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->isVZWFotaEnabled(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/privacy/SecurityDashboardUtils.smali:1463:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->isTFNFotaEnabled(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/privacy/SecurityDashboardUtils.smali:1472:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->getFotaBadgeCount(Landroid/content/Context;)I
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/privacy/alertcenter/AlertCenterSuggestionLayoutHelper$initSuggestionLayout$1.smali:97:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->launchSoftwareUpdateForSecurityUpdateMenu(Landroid/content/Context;)V
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/privacy/SafetyCenterSecurityUpdateTrampoline.smali:40:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->launchSoftwareUpdateForSecurityUpdateMenu(Landroid/content/Context;)V
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/deviceinfo/aboutphone/SecMyDeviceInfoFragment.smali:390:    invoke-static {v2}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->needSoftwareUpdateBlockonDexMode(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/homepage/TopLevelSoftwareUpdatePreferenceController.smali:45:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->needSoftwareUpdateBlockonDexMode(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/homepage/TopLevelSoftwareUpdatePreferenceController.smali:246:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->getFotaBadgeCount(Landroid/content/Context;)I
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateVariant$3.smali:29:    invoke-static {p1}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->isTFNFotaEnabled(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateVariant$2.smali:29:    invoke-static {p1}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->isVZWFotaEnabled(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali:221:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->isVZWFotaEnabled(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali:227:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->isTFNFotaEnabled(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali:238:    invoke-static {p0, v0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->startFotaActivityOrBroadcast(Landroid/content/Context;Ljava/lang/String;)V
+
+========== MÉTODOS RELACIONADOS NO PACOTE SOFTWAREUPDATE ==========
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateVariant$3.smali:26:.method public final isFotaSupported(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateVariant$2.smali:26:.method public final isFotaSupported(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali:7:.method public static getFotaBadgeCount(Landroid/content/Context;)I
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali:43:.method public static isTFNFotaEnabled(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali:110:.method public static isVZWFotaEnabled(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali:177:.method public static launchSoftwareUpdateForSecurityUpdateMenu(Landroid/content/Context;)V
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali:302:.method public static needSoftwareUpdateBlockonDexMode(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateUtils.smali:342:.method public static startFotaActivityOrBroadcast(Landroid/content/Context;Ljava/lang/String;)V
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateVariant.smali:128:.method public static get(Landroid/content/Context;)Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateVariant;
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateVariant.smali:175:.method public static valueOf(Ljava/lang/String;)Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateVariant;
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateVariant.smali:189:.method public static values()[Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateVariant;
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateVariant.smali:254:.method public isFotaSupported(Landroid/content/Context;)Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateBixbyController.smali:139:.method public bridge synthetic getSliceHighlightMenuRes()I
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateBixbyController.smali:163:.method public bridge synthetic hasAsyncDBUpdate()Z
+out/target/a05s/apktool/system/priv-app/SecSettings/SecSettings.apk/smali_classes3/com/samsung/android/settings/softwareupdate/SoftwareUpdateBixbyController.smali:171:.method public bridge synthetic hasAsyncUpdate()Z
+
+========== STRINGS RELEVANTES EM SOFTWAREUPDATEUTILS ==========
+1:.class public abstract Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;
+7:.method public static getFotaBadgeCount(Landroid/content/Context;)I
+18:    const-string v2, "badge_for_fota"
+26:    const-string v1, "getFotaBadgeCount badgeCount : "
+43:.method public static isTFNFotaEnabled(Landroid/content/Context;)Z
+90:    const-string v3, "com.samsung.sdm.TFNSystemUpdatesLauncher"
+110:.method public static isVZWFotaEnabled(Landroid/content/Context;)Z
+157:    const-string v3, "com.samsung.sdm.VZWSystemUpdatesLauncher"
+177:.method public static launchSoftwareUpdateForSecurityUpdateMenu(Landroid/content/Context;)V
+182:    invoke-static {p0, v0}, Lcom/android/settings/Utils;->isPackageEnabled(Landroid/content/Context;Ljava/lang/String;)Z
+198:    const-string v2, "com.att.fotaagent.enabler.ui.userinit.UserInitActivity"
+221:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->isVZWFotaEnabled(Landroid/content/Context;)Z
+227:    invoke-static {p0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->isTFNFotaEnabled(Landroid/content/Context;)Z
+238:    invoke-static {p0, v0}, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils;->startFotaActivityOrBroadcast(Landroid/content/Context;Ljava/lang/String;)V
+273:    const-string v1, "com.samsung.sdm.VZWSystemUpdatesLauncher"
+281:    const-string v1, "com.samsung.sdm.TFNSystemUpdatesLauncher"
+302:.method public static needSoftwareUpdateBlockonDexMode(Landroid/content/Context;)Z
+317:    new-instance v0, Lcom/samsung/android/settings/softwareupdate/SoftwareUpdateUtils$$ExternalSyntheticLambda0;
+342:.method public static startFotaActivityOrBroadcast(Landroid/content/Context;Ljava/lang/String;)V
+367:    const-string v1, "sec.fota.action.SOFTWARE_UPDATE"

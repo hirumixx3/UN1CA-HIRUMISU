@@ -110,8 +110,7 @@ index 17739fae0..c59858ab9 100644
  
      move-result v0
  
--    if-eqz v0, :cond_1
-+    if-eqz v0, :cond_2
+     if-eqz v0, :cond_1
 +
 +    iget-object v0, p0, Lcom/android/server/wm/WindowManagerService;->mContext:Landroid/content/Context;
  
@@ -127,7 +126,7 @@ index 17739fae0..c59858ab9 100644
 +
 +    move-result v0
 +
-+    if-eqz v0, :cond_0
++    if-eqz v0, :cond_unica_ss_detection_continue
 +
 +    invoke-static {}, Ljava/util/Collections;->emptyList()Ljava/util/List;
 +
@@ -135,37 +134,10 @@ index 17739fae0..c59858ab9 100644
 +
 +    return-object p0
 +
-+    :cond_0
++    :cond_unica_ss_detection_continue
      iget-object v0, p0, Lcom/android/server/wm/WindowManagerService;->mGlobalLock:Lcom/android/server/wm/WindowManagerGlobalLock;
  
      invoke-static {}, Lcom/android/server/wm/WindowManagerService;->boostPriorityForLockedSection()V
-@@ -22841,7 +22864,7 @@
- 
-     move-result-object p0
- 
--    if-nez p0, :cond_0
-+    if-nez p0, :cond_1
- 
-     new-instance p0, Ljava/util/ArrayList;
- 
-@@ -22860,7 +22883,7 @@
- 
-     goto :goto_0
- 
--    :cond_0
-+    :cond_1
-     :try_start_1
-     new-instance p1, Landroid/util/ArraySet;
- 
-@@ -22900,7 +22923,7 @@
- 
-     throw p0
- 
--    :cond_1
-+    :cond_2
-     new-instance p0, Ljava/lang/SecurityException;
- 
-     const-string/jumbo p1, "Requires STATUS_BAR_SERVICE permission"
 @@ -26735,6 +26758,25 @@
  
      invoke-virtual {p0}, Landroid/view/IWindowManager$Stub;->registerScreenRecordingCallback_enforcePermission()V
